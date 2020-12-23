@@ -1,0 +1,4 @@
+channels:
+  - bioconda
+dependencies:
+  - pycoqc =2.5.0.23

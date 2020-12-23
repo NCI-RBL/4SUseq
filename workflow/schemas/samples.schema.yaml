@@ -1,0 +1,17 @@
+$schema: "http://json-schema.org/draft-04/schema#"
+
+description: an entry in the sample sheet
+
+# columns that the config/samples.tsv file can have and which type they should be
+properties:
+  sampleName:
+    type: string
+    description: sample name/identifier
+  path_to_fast5_parent_folder:
+    type: string
+    description: absolute path to the fast5 folder (subfolders are included recursively)
+
+# columns that the config/samples.tsv file must have to pass schema validation
+required:
+  - sampleName
+  - path_to_fast5_parent_folder

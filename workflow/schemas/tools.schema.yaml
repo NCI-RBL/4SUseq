@@ -1,0 +1,15 @@
+$schema: "http://json-schema.org/draft-04/schema#"
+
+description: tools for envmodules in snakefile
+
+properties:
+  tool:
+    type: string
+    description: name of the tool
+  version:
+    type: string
+    description: tool version including tool name.. for example if you want to "module load fastqc/0.11.9", then version should be "fastqc/0.11.9" and tool should be fastqc
+
+required:
+  - tool
+  - version

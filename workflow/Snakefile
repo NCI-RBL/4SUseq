@@ -1,0 +1,42 @@
+# import stuff
+from snakemake.utils import R
+from os.path import join
+from os import listdir
+import os, sys
+
+# Global workflow variables
+configfile: 'config/config.yaml'              # config dictionary
+
+WORKDIR = config["workdir"]
+# FLOWCELL = config["flowcell"]
+# KIT = config["kit"]
+
+# common.smk already defines
+# SAMPLES
+# SAMPLESDF
+# TOOLS
+
+include: "rules/common.smk"
+include: "rules/other.smk"
+
+# convert = {'Y': False, 'N': True}
+if config['basecalling'].startswith("Y"):
+	basecalling = True
+else:
+	basecalling = False
+
+
+report: "report/workflow.rst"
+
+# Allow users to fix the underlying OS via singularity.
+# singularity: "docker://continuumio/miniconda3"
+
+
+if basecalling:
+	include: "rules/basecalling.smk"
+	rule all:
+		input:
+			expand(join(WORKDIR,"fastqs","{sample}.fastq.gz"), sample=SAMPLES),
+			expand(join(WORKDIR,"fastqs","{sample}.sequencing_summary.txt.gz"),sample=SAMPLES),
+			expand(join(WORKDIR,"qc","fastqc","{sample}_fastqc.zip"),sample=SAMPLES),
+			expand(join(WORKDIR,"qc","pycoQC","{sample}.pycoQC.html"),sample=SAMPLES)
