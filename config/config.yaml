@@ -1,0 +1,15 @@
+## you most probably dont need to change these
+tools: "config/tools.yaml"
+## you probably need to change or comment/uncomment some of these
+samples: "config/samples.tsv"
+workdir: "/data/RBL_NCI/ONT/ont_rnaseq/workflow/ONT_RNAseq/test_workdir"
+## Basecalling related parameters
+basecalling: "Y"
+# flowcell: "FLO-MIN106"
+flowcell: "FLO-MIN107"
+## direct RNA kit
+# kit: "SQK-RNA001"
+## 1D2 cDNA kit
+kit: "SQK-LSK308"
+## 1D cDNA kit
+# kit: "SQK-PCS108"

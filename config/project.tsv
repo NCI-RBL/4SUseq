@@ -1,0 +1,5 @@
+key	value
+workdir	/path/to/workdir
+basecalling	Y
+flowcell	FLO-MIN106
+kit	SQK-RNA001
