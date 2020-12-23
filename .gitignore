@@ -1,0 +1,6 @@
+**/.*
+!.editorconfig
+!.gitignore
+!.gitattributes
+site/
+test_*/
