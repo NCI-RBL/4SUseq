@@ -1,0 +1,6 @@
+## you most probably dont need to change these
+tools: "config/tools.yaml"
+## you probably need to change or comment/uncomment some of these
+samples: "config/samples_test.tsv"
+workdir: "WORKDIR"
+resources: "RESOURCESDIR"
