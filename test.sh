@@ -3,9 +3,9 @@ set -euo pipefail
 
 # ## setting PIPELINE_HOME
 # ## clone the pipeline to a folder
-# ## git clone https://github.com/kopardev/circRNA.git
+# ## git clone https://github.com/RBL-NCI/4SUseq.git
 # ## and set that as the pipeline home
-PIPELINE_HOME="/data/Ziegelbauer_lab/circRNADetection/scripts/circRNA"
+PIPELINE_HOME="/data/RBL_NCI/Wolin/mESC_slam_analysis/workflow/4SUseq"
 echo "Pipeline Dir: $PIPELINE_HOME"
 # ## make current folder as working directory
 a=$(readlink -f $0)
@@ -41,6 +41,10 @@ cd $WORKDIR
 
 # make sure that config folder exists in the current folder
 if [ ! -d $WORKDIR/config ]; then cp -r $PIPELINE_HOME/config $WORKDIR/;echo "Config Dir: $WORKDIR/config";fi
+# change the working directory to current directory
+# sed -i "s/WORKDIR/\/data\/RBL_NCI\/Wolin\/mESC_slam_analysis\/test_workdir/g" $WORKDIR/config/config.yaml
+WORKDIR_esc=${WORKDIR////\\\/}
+sed -i "s/WORKDIR/$WORKDIR_esc/g" $WORKDIR/config/config.yaml
 if [ ! -d $WORKDIR/scripts ]; then cp -r $PIPELINE_HOME/scripts $WORKDIR/;echo "Scripts Dir: $WORKDIR/scripts";fi
 if [ ! -d $WORKDIR/resources ]; then cp -r $PIPELINE_HOME/resources $WORKDIR/;echo "Resources Dir: $WORKDIR/resources";fi
 

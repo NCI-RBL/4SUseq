@@ -8,23 +8,16 @@ import os, sys
 configfile: 'config/config.yaml'              # config dictionary
 
 WORKDIR = config["workdir"]
-# FLOWCELL = config["flowcell"]
-# KIT = config["kit"]
+# define subfolders
+TRIMDIR = join(WORKDIR,"trim")
 
-# common.smk already defines
+# init.smk already defines
 # SAMPLES
 # SAMPLESDF
 # TOOLS
 
-include: "rules/common.smk"
-include: "rules/other.smk"
-
-# convert = {'Y': False, 'N': True}
-if config['basecalling'].startswith("Y"):
-	basecalling = True
-else:
-	basecalling = False
-
+include: "rules/init.smk"
+include: "rules/rules.smk"
 
 report: "report/workflow.rst"
 
@@ -32,11 +25,9 @@ report: "report/workflow.rst"
 # singularity: "docker://continuumio/miniconda3"
 
 
-if basecalling:
-	include: "rules/basecalling.smk"
-	rule all:
-		input:
-			expand(join(WORKDIR,"fastqs","{sample}.fastq.gz"), sample=SAMPLES),
-			expand(join(WORKDIR,"fastqs","{sample}.sequencing_summary.txt.gz"),sample=SAMPLES),
-			expand(join(WORKDIR,"qc","fastqc","{sample}_fastqc.zip"),sample=SAMPLES),
-			expand(join(WORKDIR,"qc","pycoQC","{sample}.pycoQC.html"),sample=SAMPLES)
+rule all:
+	input:
+		# trimmed fastqs
+		expand(join(TRIMDIR,"{sample}.R1.trim.fastq.gz"), sample=SAMPLES),
+		expand(join(TRIMDIR,"{sample}.R2.trim.fastq.gz"), sample=SAMPLES),
+
