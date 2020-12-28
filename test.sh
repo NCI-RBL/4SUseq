@@ -24,12 +24,13 @@ USAGE:
 Required Positional Argument:
   MODE: [Type: Str] Valid options:
     a) init: initial workdir
-    b) run: run test data
-    c) cleanup: delete folders to get ready for re-init
-    d) reset: cleanup followed by init
-    e) dryrun: snakemake --dry-run
-    f) unlock: snakemake --unlock
-    g) runlocal: run without submitting to sbatch
+    b) inittest: initial workdir for testing 
+    c) reset: cleanup followed by init
+    d) cleanup: delete folders to get ready for re-init
+    e) unlock: snakemake --unlock
+    f) dryrun: snakemake --dry-run
+    g) run: run test data
+    h) runlocal: run without submitting to sbatch
 EOF
 }
 
@@ -38,20 +39,37 @@ function err() { cat <<< "$@" 1>&2; }
 function init() {
 echo "Working Dir: $WORKDIR"
 cd $WORKDIR
+WORKDIR_esc=${WORKDIR////\\\/}
+PIPELINE_HOME_esc=${PIPELINE_HOME////\\\/}
+RESOURCESDIR="${WORKDIR}/resources"
+RESOURCESDIR_esc=${RESOURCESDIR////\\\/}
 
 # make sure that config folder exists in the current folder
 if [ ! -d $WORKDIR/config ]; then cp -r $PIPELINE_HOME/config $WORKDIR/;echo "Config Dir: $WORKDIR/config";fi
 # change the working directory to current directory
 # sed -i "s/WORKDIR/\/data\/RBL_NCI\/Wolin\/mESC_slam_analysis\/test_workdir/g" $WORKDIR/config/config.yaml
-WORKDIR_esc=${WORKDIR////\\\/}
 sed -i "s/WORKDIR/$WORKDIR_esc/g" $WORKDIR/config/config.yaml
-if [ ! -d $WORKDIR/scripts ]; then cp -r $PIPELINE_HOME/scripts $WORKDIR/;echo "Scripts Dir: $WORKDIR/scripts";fi
+sed -i "s/WORKDIR/$WORKDIR_esc/g" $WORKDIR/config/config_test.yaml
+sed -i "s/RESOURCESDIR/$RESOURCESDIR_esc/g" $WORKDIR/config/config.yaml
+sed -i "s/RESOURCESDIR/$RESOURCESDIR_esc/g" $WORKDIR/config/config_test.yaml
+sed -i "s/PIPELINE_HOME/$PIPELINE_HOME_esc/g" $WORKDIR/config/samples_test.tsv
+if [ ! -d $WORKDIR/scripts ]; then cp -r $PIPELINE_HOME/workflow/scripts $WORKDIR/;echo "Scripts Dir: $WORKDIR/scripts";fi
 if [ ! -d $WORKDIR/resources ]; then cp -r $PIPELINE_HOME/resources $WORKDIR/;echo "Resources Dir: $WORKDIR/resources";fi
 
 #create log and stats folders
 if [ ! -d $WORKDIR/logs ]; then mkdir -p $WORKDIR/logs;echo "Logs Dir: $WORKDIR/logs";fi
 if [ ! -d $WORKDIR/stats ];then mkdir -p $WORKDIR/stats;echo "Stats Dir: $WORKDIR/stats";fi
 
+}
+
+function inittest {
+  init
+  if [ -f $WORKDIR/config/config.yaml.original ];then rm -f $WORKDIR/config/config.yaml.original;fi
+  if [ -f $WORKDIR/config/cluster.json.original ];then rm -f $WORKDIR/config/cluster.json.original;fi
+  cp $WORKDIR/config/config.yaml $WORKDIR/config/config.yaml.original
+  cp $WORKDIR/config/cluster.json $WORKDIR/config/cluster.json.original
+  cp $WORKDIR/config/config_test.yaml $WORKDIR/config/config.yaml
+  cp $WORKDIR/config/cluster_test.json $WORKDIR/config/cluster.json
 }
 
 function run () {
@@ -82,25 +100,25 @@ function run () {
 
   if [ "$1" == "local" ];then
 
-  snakemake -s ${PIPELINE_HOME}/circRNADetection.snakefile \
+  snakemake -s ${PIPELINE_HOME}/workflow/Snakefile \
   --directory $WORKDIR \
   --use-envmodules \
   --printshellcmds \
   --latency-wait 120 \
-  --configfile ${WORKDIR}/config/config.yaml \
+  --configfile $WORKDIR/config/config.yaml \
   --cores all \
   --stats ${WORKDIR}/snakemake.stats \
   2>&1|tee ${WORKDIR}/snakemake.log
 
   else
 
-  snakemake $1 -s ${PIPELINE_HOME}/circRNADetection.snakefile \
+  snakemake $1 -s ${PIPELINE_HOME}/workflow/Snakefile \
   --directory $WORKDIR \
   --use-envmodules \
   --printshellcmds \
   --latency-wait 120 \
-  --configfile ${WORKDIR}/config/config.yaml \
-  --cluster-config ${WORKDIR}/config/cluster.json \
+  --configfile $WORKDIR/config/config.yaml \
+  --cluster-config $WORKDIR/config/cluster.json \
   --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name {cluster.name} --output {cluster.output} --error {cluster.error}" \
   -j 500 \
   --rerun-incomplete \
@@ -129,6 +147,7 @@ function main(){
 
   case $1 in
     init) init && exit 0;;
+    inittest) inittest && exit 0;;
     dryrun) run --dry-run && exit 0;;
     unlock) run --unlock && exit 0;;
     run) run "" && exit 0;;

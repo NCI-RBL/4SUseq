@@ -1,6 +1,6 @@
 fastqc:
  version: "fastqc/0.11.9"
-guppy:
- version: "guppy/4.2.2"
 pigz:
  version: "pigz/2.4"
+cutadapt:
+ version: "cutadapt/1.18"

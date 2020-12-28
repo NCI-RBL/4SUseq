@@ -8,6 +8,7 @@ import os, sys
 configfile: 'config/config.yaml'              # config dictionary
 
 WORKDIR = config["workdir"]
+RESOURCES_DIR = config["resources"]
 # define subfolders
 TRIMDIR = join(WORKDIR,"trim")
 

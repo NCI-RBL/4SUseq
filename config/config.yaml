@@ -3,3 +3,4 @@ tools: "config/tools.yaml"
 ## you probably need to change or comment/uncomment some of these
 samples: "config/samples.tsv"
 workdir: "WORKDIR"
+resources: "RESOURCESDIR"
