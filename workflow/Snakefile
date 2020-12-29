@@ -8,9 +8,14 @@ import os, sys
 configfile: 'config/config.yaml'              # config dictionary
 
 WORKDIR = config["workdir"]
-RESOURCES_DIR = config["resources"]
+RESOURCESDIR = config["resources"]
+SCRIPTSDIR = join(WORKDIR,"scripts")
 # define subfolders
 TRIMDIR = join(WORKDIR,"trim")
+FASTUNIQDIR = join(WORKDIR,"fastuniq")
+RAWFASTQDIR = join(WORKDIR,"raw_fastq")
+if not os.path.exists(RAWFASTQDIR):
+	os.mkdir(RAWFASTQDIR)
 
 # init.smk already defines
 # SAMPLES
@@ -31,4 +36,24 @@ rule all:
 		# trimmed fastqs
 		expand(join(TRIMDIR,"{sample}.R1.trim.fastq.gz"), sample=SAMPLES),
 		expand(join(TRIMDIR,"{sample}.R2.trim.fastq.gz"), sample=SAMPLES),
-
+		# fastuniq fastqs
+		expand(join(FASTUNIQDIR,"{sample}.R1.trim.fastuniq.fastq.gz"), sample=SAMPLES),
+		expand(join(FASTUNIQDIR,"{sample}.R2.trim.fastuniq.fastq.gz"), sample=SAMPLES),
+		# lanes.txt
+		join(RAWFASTQDIR,"lanes.txt"),
+		join(TRIMDIR,"lanes.txt"),
+		join(FASTUNIQDIR,"lanes.txt"),
+		# qc-->fastqscreen
+		expand(join(WORKDIR,"qc","fastqscreen","{sample}.R1.trim_screen.txt"), sample=SAMPLES),
+		expand(join(WORKDIR,"qc","fastqscreen","{sample}.R2.trim_screen.txt"), sample=SAMPLES),
+		# hisat on fastuniq reads
+		expand(join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam"), sample=SAMPLES),
+		expand(join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam.flagstat"), sample=SAMPLES),
+		# call snps with bcftools
+		expand(join(WORKDIR,"vcf","{sample}.genic.bcf"), sample=SAMPLES),
+		expand(join(WORKDIR,"vcf","{sample}.TtoC.vcf"), sample=SAMPLES),
+		# hisat on cutadapt reads required for getting readids to filter
+		expand(join(WORKDIR,"hisat2_allreads","{sample}.bam"), sample=SAMPLES),
+		# filtered reads for second round of RNASeq
+		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R1.fastq.gz"), sample=SAMPLES),
+		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R2.fastq.gz"), sample=SAMPLES),
