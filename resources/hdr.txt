@@ -1,0 +1,4 @@
+##INFO=<ID=strand,Number=1,Type=String,Description="strand">
+##INFO=<ID=gene_id,Number=1,Type=String,Description="gene_id">
+##INFO=<ID=gene_type,Number=1,Type=String,Description="gene_type">
+##INFO=<ID=gene_name,Number=1,Type=String,Description="gene_name">
