@@ -7,6 +7,8 @@ set -euo pipefail
 # ## and set that as the pipeline home
 PIPELINE_HOME="/data/RBL_NCI/Wolin/mESC_slam_analysis/workflow/4SUseq"
 echo "Pipeline Dir: $PIPELINE_HOME"
+# hg38 and mm10 hisat2 prebuilt indices
+HISAT2INDEXDIR="/data/RBL_NCI/Wolin/mESC_slam_analysis/resource"
 # ## make current folder as working directory
 a=$(readlink -f $0)
 # echo $a
@@ -43,13 +45,15 @@ WORKDIR_esc=${WORKDIR////\\\/}
 PIPELINE_HOME_esc=${PIPELINE_HOME////\\\/}
 RESOURCESDIR="${WORKDIR}/resources"
 RESOURCESDIR_esc=${RESOURCESDIR////\\\/}
-
+HISAT2INDEXDIR_esc=${HISAT2INDEXDIR////\\\/}
 # make sure that config folder exists in the current folder
 if [ ! -d $WORKDIR/config ]; then cp -r $PIPELINE_HOME/config $WORKDIR/;echo "Config Dir: $WORKDIR/config";fi
 # change the working directory to current directory
 # sed -i "s/WORKDIR/\/data\/RBL_NCI\/Wolin\/mESC_slam_analysis\/test_workdir/g" $WORKDIR/config/config.yaml
 sed -i "s/WORKDIR/$WORKDIR_esc/g" $WORKDIR/config/config.yaml
 sed -i "s/WORKDIR/$WORKDIR_esc/g" $WORKDIR/config/config_test.yaml
+sed -i "s/HISAT2INDEXDIR/$HISAT2INDEXDIR_esc/g" $WORKDIR/config/config.yaml
+sed -i "s/HISAT2INDEXDIR/$HISAT2INDEXDIR_esc/g" $WORKDIR/config/config_test.yaml
 sed -i "s/RESOURCESDIR/$RESOURCESDIR_esc/g" $WORKDIR/config/config.yaml
 sed -i "s/RESOURCESDIR/$RESOURCESDIR_esc/g" $WORKDIR/config/config_test.yaml
 sed -i "s/PIPELINE_HOME/$PIPELINE_HOME_esc/g" $WORKDIR/config/samples_test.tsv
