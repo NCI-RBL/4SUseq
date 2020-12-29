@@ -4,3 +4,21 @@ pigz:
  version: "pigz/2.4"
 cutadapt:
  version: "cutadapt/1.18"
+fastq_screen:
+ version: "fastq_screen/0.14.0"
+bowtie:
+ version: "bowtie/2-2.4.2"
+hisat:
+ version: "hisat/2.2.1.0"
+samtools:
+ version: "samtools/1.9"
+sambamba:
+ version: "sambamba/0.8.0"
+picard:
+ version: "picard/2.9.2"
+bbtools:
+ version: "bbtools/38.87"
+bcftools:
+ version: "bcftools/1.9"
+java:
+ version: "java/12.0.1"
