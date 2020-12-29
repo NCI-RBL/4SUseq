@@ -4,3 +4,8 @@ tools: "config/tools.yaml"
 samples: "config/samples.tsv"
 workdir: "WORKDIR"
 resources: "RESOURCESDIR"
+hisatindex: "HISAT2INDEXDIR"
+## genome can be mm10 or hg38
+genome: "mm10"
+## uncomment and redefined scriptsdir if it is not the same as PIPELINE_HOME/worflow/scripts
+# scripts: "scripts"
