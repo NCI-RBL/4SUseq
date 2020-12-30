@@ -60,7 +60,8 @@ rule get_fastq_nreads:
 	input:
 		f1=RAWFASTQDIR,
 		f2=TRIMDIR,
-		f3=FASTUNIQDIR
+		f3=FASTUNIQDIR,
+		x=expand(join(FASTUNIQDIR,"{sample}.R1.trim.fastuniq.fastq.gz"),sample=SAMPLES)
 	output:
 		o1=join(RAWFASTQDIR,"lanes.txt"),
 		o2=join(TRIMDIR,"lanes.txt"),
@@ -72,7 +73,7 @@ rule get_fastq_nreads:
 		scriptsdir=SCRIPTSDIR
 	threads: 56
 	shell:"""
-for f in {input};do
+for f in {input.f1} {input.f2} {input.f3};do
 cd $f
 bash {params.bashscript} {params.scriptsdir}
 done
@@ -107,7 +108,9 @@ rule hisat_on_fastuniq:
 		if2=rules.fastuniq.output.of2
 	output:
 		bam=join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam"),
-		flagstat=join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam.flagstat")
+		flagstat1=join(WORKDIR,"hisat2","{sample}.post_secondary_supplementary_filter.bam.flagstat"),
+		flagstat2=join(WORKDIR,"hisat2","{sample}.post_insertion_filter.bam.flagstat"),
+		flagstat3=join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam.flagstat")
 	params:
 		sample="{sample}",
 		workdir=WORKDIR,
@@ -131,15 +134,15 @@ hisat2 \
  --un-gz {params.outdir}/{params.sample}.unmapped.fastq.gz \
  --mp 4,2 \
  | samtools view -@{threads} -bS -F 4 -F 256 - > /dev/shm/{params.sample}.postsamtoolsview.bam
-sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsamtoolsview.bam > {params.outdir}/{params.sample}.post_secondary_supplementary_filter.bam.flagstat
+sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsamtoolsview.bam > {output.flagstat1}
 bbtools reformat in1=/dev/shm/{params.sample}.postsamtoolsview.bam out1=stdout.bam insfilter=0 -Xmx100g -t={threads} \
  | java -Xmx100g -jar $PICARDJARPATH/picard.jar FixMateInformation I=/dev/stdin O=/dev/stdout QUIET=true \
  | sambamba sort --memory-limit=100G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.postsambambasort.bam /dev/stdin
 sambamba index --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam
-sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam > {params.outdir}/{params.sample}.post_insertion_filter.bam.flagstat
+sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam > {output.flagstat2}
 python {params.filter_script} -i /dev/shm/{params.sample}.postsambambasort.bam -o {output.bam} -q 3
 sambamba index --nthreads={threads} {output.bam}
-sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat}
+sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat3}
 # rm -f {params.sample}.postsambambasort.bam {params.sample}.postsamtoolsview.bam
 """
 
@@ -237,3 +240,40 @@ python {params.filterbyreadidspy} --infq {input.infq2} --outfq ${{o2%.*}} --read
 pigz -p4 ${{o1%.*}}
 pigz -p4 ${{o2%.*}}
 """
+
+rule get_nfragments_json:
+	input:
+		lanes1=rules.get_fastq_nreads.output.o1,
+		lanes2=rules.get_fastq_nreads.output.o2,
+		lanes3=rules.get_fastq_nreads.output.o3,
+		flagstat1=rules.hisat_on_fastuniq.output.flagstat1,
+		flagstat2=rules.hisat_on_fastuniq.output.flagstat2,
+		flagstat3=rules.hisat_on_fastuniq.output.flagstat3,
+		vcf=rules.call_mutations.output.TtoCvcf
+	output:
+		json=join(WORKDIR,"qc","nfragments","{sample}.json")
+	params:
+		sample="{sample}",
+		workdir=WORKDIR,
+		outdir=join(WORKDIR,"qc","nfragments"),
+		pyscript=join(SCRIPTSDIR,"get_per_sample_nfragments.py")
+	shell:"""
+cd {params.workdir}
+python {params.pyscript} {params.sample} {output.json}
+"""
+
+rule create_nfragments_table:
+	input:
+		expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample= SAMPLES)
+	output:
+		table=join(WORKDIR,"qc","nfragments","nfragments.tsv")
+	params:
+		workdir=WORKDIR,
+		outdir=join(WORKDIR,"qc","nfragments"),
+		pyscript=join(SCRIPTSDIR,"nfragments_json2table.py")
+	shell:"""
+cd {params.outdir}
+python {params.pyscript} {output.table}
+"""
+
+

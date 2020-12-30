@@ -16,6 +16,10 @@ FASTUNIQDIR = join(WORKDIR,"fastuniq")
 RAWFASTQDIR = join(WORKDIR,"raw_fastq")
 if not os.path.exists(RAWFASTQDIR):
 	os.mkdir(RAWFASTQDIR)
+if not os.path.exists(TRIMDIR):
+	os.mkdir(TRIMDIR)
+if not os.path.exists(FASTUNIQDIR):
+	os.mkdir(FASTUNIQDIR)
 
 # init.smk already defines
 # SAMPLES
@@ -57,3 +61,5 @@ rule all:
 		# filtered reads for second round of RNASeq
 		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R1.fastq.gz"), sample=SAMPLES),
 		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R2.fastq.gz"), sample=SAMPLES),
+		# nfragments qc table
+		join(WORKDIR,"qc","nfragments","nfragments.tsv")

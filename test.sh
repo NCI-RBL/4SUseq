@@ -28,11 +28,12 @@ Required Positional Argument:
     a) init: initial workdir
     b) inittest: initial workdir for testing 
     c) reset: cleanup followed by init
-    d) cleanup: delete folders to get ready for re-init
-    e) unlock: snakemake --unlock
-    f) dryrun: snakemake --dry-run
-    g) run: run test data
-    h) runlocal: run without submitting to sbatch
+    d) resetinittest: cleanup followed by inittest
+    e) cleanup: delete folders to get ready for re-init
+    f) unlock: snakemake --unlock
+    g) dryrun: snakemake --dry-run
+    h) run: run test data
+    i) runlocal: run without submitting to sbatch
 EOF
 }
 
@@ -144,6 +145,13 @@ function cleanup() {
   rm -rf *snakemake*
 }
 
+function resetinittest() {
+  rm -rf ${WORKDIR}/config
+  rm -rf ${WORKDIR}/scripts
+  rm -rf ${WORKDIR}/resources
+  inittest
+}
+
 
 function main(){
 
@@ -158,6 +166,7 @@ function main(){
     runlocal) run local && exit 0;;
     cleanup) cleanup && exit 0;;
     reset) cleanup && init && exit 0;;
+    resetinittest) resetinittest && exit 0;;
     -h | --help | help) usage && exit 0;;
     -* | --*) err "Error: Failed to provide mode: <init|run>."; usage && exit 1;;
     *) err "Error: Failed to provide mode: <init|run>. '${1}' is not supported."; usage && exit 1;;

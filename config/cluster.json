@@ -1,24 +1,26 @@
 {
     "__default__": {
         "gres": "lscratch:256",
-        "mem": "20g",
+        "mem": "200g",
         "partition": "norm,ccr",
-        "threads": "2",
-        "time": "1:00:00",
-        "name"      : "{rule}.{wildcards}",
-        "output"    : "logs/cluster/{rule}.{wildcards}.out",
-        "error"     : "logs/cluster/{rule}.{wildcards}.err"
-    },
-    "guppy": {
-        "gres": "lscratch:400,gpu:v100x:1",
-        "mem": "20g",
-        "partition": "gpu",
-        "threads": "14",
-        "time": "24:00:00"
-    },
-    "fastqc": {
-        "mem": "100g",
         "threads": "56",
-        "time": "24:00:00"
+        "time": "24:00:00",
+        "name"      : "{rule}.{wildcards}",
+        "output"    : "logs/{rule}.{wildcards}.out",
+        "error"     : "logs/{rule}.{wildcards}.err"
+    },
+    "get_fastq_nreads": {
+        "mem": "20g",
+        "threads": "2",
+        "time": "2:00:00"
+    },
+    "get_nonmutant_reads": {
+        "threads": "4"
+    },
+    "get_nfragments_json": {
+        "threads": "2"
+    },
+    "create_nfragments_table": {
+        "threads": "2"
     }
 }
