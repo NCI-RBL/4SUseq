@@ -122,6 +122,7 @@ function run () {
   --use-envmodules \
   --printshellcmds \
   --latency-wait 120 \
+  --restart-times 2 \
   --configfile $WORKDIR/config/config.yaml \
   --cluster-config $WORKDIR/config/cluster.json \
   --cluster "sbatch --gres {cluster.gres} --cpus-per-task {cluster.threads} -p {cluster.partition} -t {cluster.time} --mem {cluster.mem} --job-name {cluster.name} --output {cluster.output} --error {cluster.error}" \
