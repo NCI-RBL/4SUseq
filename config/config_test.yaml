@@ -7,3 +7,5 @@ resources: "RESOURCESDIR"
 hisatindex: "HISAT2INDEXDIR"
 ## genome can be mm10 or hg38 ... mm10 for testdata
 genome: "mm10"
+mapqfilter: "3"
+ninsertionfilter: "1"
