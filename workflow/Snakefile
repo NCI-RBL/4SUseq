@@ -4,6 +4,9 @@ from os.path import join
 from os import listdir
 import os, sys
 
+# set memory
+MEMORY="200"
+
 # Global workflow variables
 configfile: 'config/config.yaml'              # config dictionary
 
@@ -59,7 +62,7 @@ rule all:
 		# hisat on cutadapt reads required for getting readids to filter
 		expand(join(WORKDIR,"hisat2_allreads","{sample}.bam"), sample=SAMPLES),
 		# filtered reads for second round of RNASeq
-		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R1.fastq.gz"), sample=SAMPLES),
-		expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R2.fastq.gz"), sample=SAMPLES),
+		# expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R1.fastq.gz"), sample=SAMPLES),
+		# expand(join(WORKDIR,"filtered_reads","{sample}.filtered.R2.fastq.gz"), sample=SAMPLES),
 		# nfragments qc table
 		join(WORKDIR,"qc","nfragments","nfragments.tsv")
