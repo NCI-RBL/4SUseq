@@ -113,12 +113,15 @@ rule hisat_on_fastuniq:
 		flagstat3=join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam.flagstat")
 	params:
 		sample="{sample}",
+		mem=MEMORY,
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"hisat2"),
 		genome=config["genome"],
 		hisatindex=config["hisatindex"],
 		splicesites=join(RESOURCESDIR,config["genome"]+".splicesites.txt"),
-		filter_script=join(SCRIPTSDIR,"filter_bam.py")
+		filter_script=join(SCRIPTSDIR,"filter_bam.py"),
+		mapqfilter=config['mapqfilter'],
+		ninsertionfilter=config['ninsertionfilter']
 	threads: 56
 	envmodules: TOOLS["hisat"]["version"], TOOLS["samtools"]["version"], TOOLS["sambamba"]["version"],  TOOLS["picard"]["version"],  TOOLS["bbtools"]["version"]
 	shell:"""
@@ -133,17 +136,17 @@ hisat2 \
  --rg-id {params.sample} --rg SM:{params.sample} \
  --un-gz {params.outdir}/{params.sample}.unmapped.fastq.gz \
  --mp 4,2 \
- | samtools view -@{threads} -bS -F 4 -F 256 - > /dev/shm/{params.sample}.postsamtoolsview.bam
-sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsamtoolsview.bam > {output.flagstat1}
-bbtools reformat in1=/dev/shm/{params.sample}.postsamtoolsview.bam out1=stdout.bam insfilter=0 -Xmx100g -t={threads} \
- | java -Xmx100g -jar $PICARDJARPATH/picard.jar FixMateInformation I=/dev/stdin O=/dev/stdout QUIET=true \
- | sambamba sort --memory-limit=100G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.postsambambasort.bam /dev/stdin
-sambamba index --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam
+ | samtools view -@{threads} -bS -F 4 -F 256 - > /dev/shm/{params.sample}.post_secondary_supplementary_filter.tmp.bam
+sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.post_secondary_supplementary_filter.bam /dev/shm/{params.sample}.post_secondary_supplementary_filter.tmp.bam && rm -f /dev/shm/{params.sample}.post_secondary_supplementary_filter.tmp.bam
+sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.post_secondary_supplementary_filter.bam > {output.flagstat1}
+python {params.filter_script} -i /dev/shm/{params.sample}.post_secondary_supplementary_filter.bam -o /dev/shm/{params.sample}.post_insertion_filter.tmp.bam -q 0 -n {params.ninsertionfilter}
+sambamba sort -n --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.post_insertion_filter.bam /dev/shm/{params.sample}.post_insertion_filter.tmp.bam && rm -f /dev/shm/{params.sample}.post_insertion_filter.tmp.bam
+java -Xmx{params.mem}g -jar $PICARDJARPATH/picard.jar FixMateInformation I=/dev/shm/{params.sample}.post_insertion_filter.bam O=/dev/stdout ASSUME_SORTED=true QUIET=true \
+ | sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.postsambambasort.bam /dev/stdin
 sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam > {output.flagstat2}
-python {params.filter_script} -i /dev/shm/{params.sample}.postsambambasort.bam -o {output.bam} -q 3
+python {params.filter_script} -i /dev/shm/{params.sample}.postsambambasort.bam -o {output.bam} -q {params.mapqfilter} -n 1000
 sambamba index --nthreads={threads} {output.bam}
 sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat3}
-# rm -f {params.sample}.postsambambasort.bam {params.sample}.postsamtoolsview.bam
 """
 
 rule call_mutations:
@@ -168,7 +171,6 @@ bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD
 bcftools call -mv -Ob --threads {threads} | \
 bcftools filter -i '%QUAL>45' -g3 -Ob --threads {threads} - | \
 bcftools annotate -a {params.tab} -h {params.hdr} -c CHROM,FROM,TO,strand,gene_id,gene_type,gene_name -Ob --threads {threads} - | \
-bcftools view -i '(REF=="A" & ALT="G") | (REF=="T" & ALT=="C")' -Ob --threads {threads} - | \
 bcftools view -i 'INFO/strand=="-" | INFO/strand=="+"' -Ob --threads {threads} - > {output.genicbcf}
 bcftools view -i '(REF=="A" & ALT="G") | (REF=="T" & ALT=="C")' --threads {threads} {output.genicbcf} > {output.TtoCvcf}
 """
@@ -182,6 +184,7 @@ rule hisat_on_cutadapt:
 		flagstat=join(WORKDIR,"hisat2_allreads","{sample}.bam.flagstat")
 	params:
 		sample="{sample}",
+		mem=MEMORY,
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"hisat2_allreads"),
 		genome=config["genome"],
@@ -203,7 +206,7 @@ hisat2 \
  --un-gz {params.outdir}/{params.sample}.unmapped.fastq.gz \
  --mp 4,2 \
  | samtools view -@{threads} -bS -F 4 -F 256 - \
- | sambamba sort --memory-limit=100G --tmpdir=/dev/shm --nthreads={threads} --out={output.bam} /dev/stdin
+ | sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.bam} /dev/stdin
 sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat}
 """
 
@@ -218,6 +221,7 @@ rule get_nonmutant_reads:
 		outfq2=join(WORKDIR,"filtered_reads","{sample}.filtered.R2.fastq.gz"),
 	params:
 		sample="{sample}",
+		mem=MEMORY,
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"filtered_reads"),
 		genome=config["genome"],
@@ -227,7 +231,7 @@ rule get_nonmutant_reads:
 		sam2tsvjar=join(RESOURCESDIR,"sam2tsv.jar")
 	envmodules: TOOLS["java"]["version"]
 	shell:"""
-java -Xmx100g -jar {params.sam2tsvjar} \
+java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --reference {params.hisatindex}/{params.genome}/{params.genome}.fa \
  --skip-N \
  {input.bam} | \
