@@ -6,7 +6,7 @@
         "threads": "2",
         "time": "1:00:00",
         "name"      : "{rule}.{wildcards}",
-        "output"    : "logs/{rule}.{wildcards}.out",
-        "error"     : "logs/{rule}.{wildcards}.err"
+        "output"    : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.out",
+        "error"     : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.err"
     }
 }

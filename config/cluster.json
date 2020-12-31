@@ -6,8 +6,8 @@
         "threads": "56",
         "time": "24:00:00",
         "name"      : "{rule}.{wildcards}",
-        "output"    : "logs/{rule}.{wildcards}.out",
-        "error"     : "logs/{rule}.{wildcards}.err"
+        "output"    : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.out",
+        "error"     : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.err"
     },
     "get_fastq_nreads": {
         "mem": "20g",
