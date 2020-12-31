@@ -9,4 +9,9 @@ To investigate newly synthesized transcripts, RNAs in mouse stem cells (WT and R
 ### Pipeline:
 
 Snakemake is used to orchestrate a workflow illustrated by the following schematic:
- ![img](https://tva1.sinaimg.cn/large/0081Kckwly1gm7frw464rj30u012jgnu.jpg)
+
+ ![img](https://github.com/RBL-NCI/4SUseq/blob/main/4sUSeq_pipeline.png)
+
+### Resources:
+
+! ![img](https://tva1.sinaimg.cn/large/0081Kckwly1gm7frw464rj30u012jgnu.jpg)
