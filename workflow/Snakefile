@@ -58,7 +58,7 @@ rule all:
 		expand(join(WORKDIR,"hisat2","{sample}.toSNPcalling.bam.flagstat"), sample=SAMPLES),
 		# call snps with bcftools
 		expand(join(WORKDIR,"vcf","{sample}.genic.bcf"), sample=SAMPLES),
-		expand(join(WORKDIR,"vcf","{sample}.TtoC.vcf"), sample=SAMPLES),
+		expand(join(WORKDIR,"vcf","{sample}.TtoC.vcf.gz"), sample=SAMPLES),
 		# hisat on cutadapt reads required for getting readids to filter
 		expand(join(WORKDIR,"hisat2_allreads","{sample}.bam"), sample=SAMPLES),
 		# filtered reads for second round of RNASeq

@@ -154,7 +154,7 @@ rule call_mutations:
 		bam=rules.hisat_on_fastuniq.output.bam
 	output:
 		genicbcf=join(WORKDIR,"vcf","{sample}.genic.bcf"),
-		TtoCvcf=join(WORKDIR,"vcf","{sample}.TtoC.vcf")
+		TtoCvcf=join(WORKDIR,"vcf","{sample}.TtoC.vcf.gz")
 	params:
 		sample="{sample}",
 		workdir=WORKDIR,
@@ -165,14 +165,15 @@ rule call_mutations:
 		hdr=join(RESOURCESDIR,"hdr.txt"),
 		filter_script=join(SCRIPTSDIR,"filter_bam.py")
 	threads: 56
-	envmodules: TOOLS["bcftools"]["version"]
+	envmodules: TOOLS["bcftools"]["version"], TOOLS["samtools"]["version"]
 	shell:"""
 bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD,ADF,ADR {input.bam} | \
 bcftools call -mv -Ob --threads {threads} | \
 bcftools filter -i '%QUAL>45' -g3 -Ob --threads {threads} - | \
 bcftools annotate -a {params.tab} -h {params.hdr} -c CHROM,FROM,TO,strand,gene_id,gene_type,gene_name -Ob --threads {threads} - | \
 bcftools view -i 'INFO/strand=="-" | INFO/strand=="+"' -Ob --threads {threads} - > {output.genicbcf}
-bcftools view -i '(REF=="A" & ALT="G") | (REF=="T" & ALT=="C")' --threads {threads} {output.genicbcf} > {output.TtoCvcf}
+bcftools view -i '(REF=="A" & ALT="G") | (REF=="T" & ALT=="C")' --threads {threads} {output.genicbcf} | bcftools sort -T /dev/shm --threads {threads} - | bgzip > {output.TtoCvcf}
+tabix -p vcf {output.TtoCvcf}
 """
 
 rule hisat_on_cutadapt:
@@ -231,11 +232,13 @@ rule get_nonmutant_reads:
 		sam2tsvjar=join(RESOURCESDIR,"sam2tsv.jar")
 	envmodules: TOOLS["java"]["version"]
 	shell:"""
+vcf=$(basename {input.vcf})
+zcat {input.vcf} > /dev/shm/${{vcf%.*}}
 java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --reference {params.hisatindex}/{params.genome}/{params.genome}.fa \
  --skip-N \
  {input.bam} | \
-python {params.tsv2readidspy} {input.vcf} | \
+python {params.tsv2readidspy} /dev/shm/${{vcf%.*}} | \
 sort | uniq > /dev/shm/{sample}.readids
 o1={output.outfq1}
 o2={output.outfq2}
