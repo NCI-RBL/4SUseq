@@ -1,11 +1,17 @@
-## you most probably dont need to change these
-tools: "config/tools.yaml"
-## you probably need to change or comment/uncomment some of these
-samples: "config/samples.tsv"
 workdir: "WORKDIR"
-resources: "RESOURCESDIR"
-hisatindex: "HISAT2INDEXDIR"
+samples: "WORKDIR/samples.tsv"
 ## genome can be mm10 or hg38
 genome: "mm10"
+
+#pre SNP calling filters
 mapqfilter: "3"
+# reads with this number or more insertions will be filtered out
 ninsertionfilter: "1"
+
+## you most probably dont need to change these
+scriptsdir: "PIPELINE_HOME/workflow/scripts"
+resourcesdir: "PIPELINE_HOME/resources"
+tools: "PIPELINE_HOME/config/tools.yaml"
+cluster: "PIPELINE_HOME/config/cluster.json"
+hisatindexdir: "HISAT2INDEXDIR"
+hisat_rna_strandness: "RF"
