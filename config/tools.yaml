@@ -9,7 +9,7 @@ fastq_screen:
 bowtie:
  version: "bowtie/2-2.4.2"
 hisat:
- version: "hisat/2.2.1.0"
+ version: "hisat/2.2.1.0-ngs2.10.9"
 samtools:
  version: "samtools/1.9"
 sambamba:
