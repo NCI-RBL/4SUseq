@@ -172,7 +172,7 @@ bcftools call -mv -Ob --threads {threads} | \
 bcftools filter -i '%QUAL>45' -g3 -Ob --threads {threads} - | \
 bcftools annotate -a {params.tab} -h {params.hdr} -c CHROM,FROM,TO,strand,gene_id,gene_type,gene_name -Ob --threads {threads} - | \
 bcftools view -i 'INFO/strand=="-" | INFO/strand=="+"' -Ob --threads {threads} - > {output.genicbcf}
-bcftools view -i '(REF=="A" & ALT="G") | (REF=="T" & ALT=="C")' --threads {threads} {output.genicbcf} | bcftools sort -T /dev/shm - | bgzip > {output.TtoCvcf}
+bcftools view -i '(INFO/strand=="-" & (REF=="A" & ALT="G")) | (INFO/strand=="+" & (REF=="T" & ALT="C"))' --threads {threads} {output.genicbcf} | bcftools sort -T /dev/shm - | bgzip > {output.TtoCvcf}
 tabix -p vcf {output.TtoCvcf}
 """
 

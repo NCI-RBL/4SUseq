@@ -17,11 +17,12 @@ def check_snp_list(l):
 	snpid="_".join([l[3],l[7],l[8],l[5]])
 	if snpid in snplist:
 		print(l[0])
-
-ref=sys.argv[2]
-alt=sys.argv[3] 
+ 
 
 for line in stdin_fileno:
 	line=line.strip().split("\t")
-	if line[8]==ref and line[5]==alt:
+	if line[8]=="T" and line[5]=="C":
 		check_snp_list(line)
+	if line[8]=="A" and line[5]=="G":
+		check_snp_list(line)
+

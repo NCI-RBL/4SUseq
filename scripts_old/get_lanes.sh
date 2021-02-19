@@ -4,8 +4,7 @@ for f in `ls *R1*.fastq.gz`;do
 y=`zcat $f|head -n1|awk '{print(substr($1,1,4))}'`
 echo "zcat $f|grep \"^$y\"|awk -F\":\" '{print \$3,\$4}'|sort|uniq -c > ${f}.lanes.txt"
 done > do_lanes
-# jobid=`swarm -f do_lanes --partition=ccr,norm`
-jobid=`swarm -f do_lanes --partition=quick`
+jobid=`swarm -f do_lanes --partition=ccr,norm`
 sleep 15
 while true;do
 if [ `squeue -j $jobid|wc -l` -eq 1 ]; then
