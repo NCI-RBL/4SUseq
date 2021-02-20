@@ -181,7 +181,7 @@ function run () {
 
   cat > ${WORKDIR}/submit_find_mutations_script.sbatch << EOF
 #!/bin/bash
-#SBATCH --job-name="circRNA"
+#SBATCH --job-name="findmutations"
 #SBATCH --mem=10g
 #SBATCH --partition="ccr,norm"
 #SBATCH --time=96:00:00
