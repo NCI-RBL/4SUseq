@@ -14,13 +14,14 @@ rule get_fastuniq_readids:
 	envmodules: TOOLS["pigz"]["version"]
 	threads: 56
 	shell:"""
-zcat {input.if1} > /dev/shm/{params.sample}.R1.fastq
-zcat {input.if2} > /dev/shm/{params.sample}.R2.fastq
-echo -ne "/dev/shm/{params.sample}.R1.fastq\n/dev/shm/{params.sample}.R2.fastq\n" > /dev/shm/{params.sample}.list
-{params.fastuniq} -i /dev/shm/{params.sample}.list -t q -o /dev/shm/{params.sample}.R1.trim.fastuniq.fastq -p /dev/shm/{params.sample}.R2.trim.fastuniq.fastq -c 0
-awk '{{if (! ((FNR + 3) % 4)) {{ print(substr($1,2))}}}}' /dev/shm/{params.sample}.R1.trim.fastuniq.fastq > {output.readids}
-pigz -p4 /dev/shm/{params.sample}.R1.trim.fastuniq.fastq && mv /dev/shm/{params.sample}.R1.trim.fastuniq.fastq.gz {output.of1}
-pigz -p4 /dev/shm/{params.sample}.R2.trim.fastuniq.fastq && mv /dev/shm/{params.sample}.R2.trim.fastuniq.fastq.gz {output.of2}
+zcat {input.if1} > /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.fastq
+zcat {input.if2} > /lscratch/${{SLURM_JOBID}}/{params.sample}.R2.fastq
+echo "/lscratch/${{SLURM_JOBID}}/{params.sample}.R1.fastq" > /lscratch/${{SLURM_JOBID}}/{params.sample}.list
+echo "/lscratch/${{SLURM_JOBID}}/{params.sample}.R2.fastq" >> /lscratch/${{SLURM_JOBID}}/{params.sample}.list
+{params.fastuniq} -i /lscratch/${{SLURM_JOBID}}/{params.sample}.list -t q -o /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.trim.fastuniq.fastq -p /lscratch/${{SLURM_JOBID}}/{params.sample}.R2.trim.fastuniq.fastq -c 0
+awk '{{if (! ((FNR + 3) % 4)) {{ print(substr($1,2))}}}}' /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.trim.fastuniq.fastq > {output.readids}
+pigz -p4 /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.trim.fastuniq.fastq && mv /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.trim.fastuniq.fastq.gz {output.of1}
+pigz -p4 /lscratch/${{SLURM_JOBID}}/{params.sample}.R2.trim.fastuniq.fastq && mv /lscratch/${{SLURM_JOBID}}/{params.sample}.R2.trim.fastuniq.fastq.gz {output.of2}
 
 echo "DONE!"
 """
@@ -151,10 +152,10 @@ sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat3}
 
 samtools view -@ {threads} -b -f 128 -F 16 {output.bam} > /dev/shm/{params.sample}.F1.bam
 samtools view -@ {threads} -b -f 80 {output.bam} > /dev/shm/{params.sample}.F2.bam
-samtools merge -@ {threads} /dev/shm/{params.sample}.F.bam /dev/shm/{params.sample}.F1.bam /dev/shm/{params.sample}.F2.bam && rm -f /dev/shm/{params.sample}.F1.bam /dev/shm/{params.sample}.F2.bam
+samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.F.bam /dev/shm/{params.sample}.F1.bam /dev/shm/{params.sample}.F2.bam && rm -f /dev/shm/{params.sample}.F1.bam /dev/shm/{params.sample}.F2.bam
 samtools view -@ {threads} -b -f 144 {output.bam} > /dev/shm/{params.sample}.R1.bam
 samtools view -@ {threads} -b -f 64 -F 16 {output.bam} > /dev/shm/{params.sample}.R2.bam
-samtools merge -@ {threads} /dev/shm/{params.sample}.R.bam /dev/shm/{params.sample}.R1.bam /dev/shm/{params.sample}.R2.bam && rm -f /dev/shm/{params.sample}.R1.bam /dev/shm/{params.sample}.R2.bam
+samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.R.bam /dev/shm/{params.sample}.R1.bam /dev/shm/{params.sample}.R2.bam && rm -f /dev/shm/{params.sample}.R1.bam /dev/shm/{params.sample}.R2.bam
 
 # Sort and collect stats for plus strand BAM
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.plusbam} /dev/shm/{params.sample}.F.bam && rm -f /dev/shm/{params.sample}.F.bam
@@ -234,7 +235,7 @@ tabix -p vcf {output.vcf}
 rule split_bam_by_mutation:
 	input:
 		plusbam=rules.hisat.output.plusbam,
-		minusbam=rules.hisat.output.plusbam,
+		minusbam=rules.hisat.output.minusbam,
 		plusvcf=rules.call_mutations.output.plusvcf,
 		minusvcf=rules.call_mutations.output.minusvcf,
 	output:
@@ -262,7 +263,7 @@ java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --skip-N \
  {input.plusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{plusvcf%.*}} "T" "C" | \
-sort | uniq > /dev/shm/{sample}.readids
+sort | uniq > /dev/shm/{sample}.plus.readids
 
 minusvcf=$(basename {input.minusvcf})
 zcat {input.minusvcf} > /dev/shm/${{minusvcf%.*}}
@@ -271,15 +272,15 @@ java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --skip-N \
  {input.minusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{minusvcf%.*}} "A" "G" | \
-sort | uniq >> /dev/shm/{sample}.readids
+sort | uniq > /dev/shm/{sample}.minus.readids
 
-python {params.filterbyreadidspy} -i {input.plusbam} -o /dev/shm/{params.sample}.mutated.plus.bam --readids /dev/shm/{sample}.readids -o2 /dev/shm/{params.sample}.unmutated.plus.bam
-python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample}.mutated.minus.bam --readids /dev/shm/{sample}.readids -o2 /dev/shm/{params.sample}.unmutated.minus.bam
+python {params.filterbyreadidspy} -i {input.plusbam} -o /dev/shm/{params.sample}.mutated.plus.bam --readids /dev/shm/{sample}.plus.readids -o2 /dev/shm/{params.sample}.unmutated.plus.bam
+python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample}.mutated.minus.bam --readids /dev/shm/{sample}.minus.readids -o2 /dev/shm/{params.sample}.unmutated.minus.bam
 
-samtools merge -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
+samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.mutatedbam} /dev/shm/{params.sample}.mutated.bam && rm -f /dev/shm/{params.sample}.mutated.bam
 
-samtools merge -@ {threads} /dev/shm/{params.sample}.unmutated.bam /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam && rm -f /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam
+samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.unmutated.bam /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam && rm -f /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.unmutatedbam} /dev/shm/{params.sample}.unmutated.bam && rm -f /dev/shm/{params.sample}.unmutated.bam
 
 """
