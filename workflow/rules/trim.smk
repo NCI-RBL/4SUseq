@@ -2,8 +2,8 @@ def get_fastqs(wildcards):
 	d=dict()
 	d["R1"]=SAMPLESDF["path_to_R1_fastq"][wildcards.sample]
 	d["R2"]=SAMPLESDF["path_to_R2_fastq"][wildcards.sample]
-	print("in get_fastqs")
-	print(d)
+#	print("in get_fastqs")
+#	print(d)
 	return d
 
 
