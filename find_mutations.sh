@@ -123,42 +123,43 @@ function runslurm() {
   run "slurm"
 }
 
-function run () {
+function preruncleanup() {
   echo "Running..."
+
+  cd $WORKDIR
   ## check if initialized
   for f in config.yaml samples.tsv; do
     if [ ! -f $WORKDIR/$f ]; then err "Error: '${f}' file not found in workdir ... initialize first!";usage && exit 1;fi
   done
-
   ## Archive previous run files
   if [ -f ${WORKDIR}/snakemake.log ];then 
     modtime=$(stat ${WORKDIR}/snakemake.log |grep Modify|awk '{print $2,$3}'|awk -F"." '{print $1}'|sed "s/ //g"|sed "s/-//g"|sed "s/://g")
     mv ${WORKDIR}/snakemake.log ${WORKDIR}/stats/snakemake.${modtime}.log
-  fi
-  if [ -f ${WORKDIR}/snakemake.stats ];then 
-    modtime=$(stat ${WORKDIR}/snakemake.stats |grep Modify|awk '{print $2,$3}'|awk -F"." '{print $1}'|sed "s/ //g"|sed "s/-//g"|sed "s/://g")
-    mv ${WORKDIR}/snakemake.stats ${WORKDIR}/stats/snakemake.${modtime}.stats
+    if [ -f ${WORKDIR}/snakemake.log.HPC_summary.txt ];then 
+      mv ${WORKDIR}/snakemake.log.HPC_summary.txt ${WORKDIR}/stats/snakemake.${modtime}.log.HPC_summary.txt
+    fi
+    if [ -f ${WORKDIR}/snakemake.stats ];then 
+      mv ${WORKDIR}/snakemake.stats ${WORKDIR}/stats/snakemake.${modtime}.stats
+    fi
   fi
   nslurmouts=$(find ${WORKDIR} -maxdepth 1 -name "slurm-*.out" |wc -l)
   if [ "$nslurmouts" != "0" ];then
     for f in $(ls ${WORKDIR}/slurm-*.out);do gzip -n $f;mv ${f}.gz ${WORKDIR}/logs/;done
   fi
 
-  ## Archive previous run files
-  if [ -f ${WORKDIR}/snakemake.log ];then 
-    modtime=$(stat ${WORKDIR}/snakemake.log |grep Modify|awk '{print $2,$3}'|awk -F"." '{print $1}'|sed "s/ //g"|sed "s/-//g"|sed "s/://g")
-    mv ${WORKDIR}/snakemake.log ${WORKDIR}/stats/snakemake.log.${modtime} && gzip -n ${WORKDIR}/stats/snakemake.log.${modtime}
-  fi
-  if [ -f ${WORKDIR}/snakemake.stats ];then 
-    modtime=$(stat ${WORKDIR}/snakemake.stats |grep Modify|awk '{print $2,$3}'|awk -F"." '{print $1}'|sed "s/ //g"|sed "s/-//g"|sed "s/://g")
-    mv ${WORKDIR}/snakemake.stats ${WORKDIR}/stats/snakemake.stats.${modtime} && gzip -n ${WORKDIR}/stats/snakemake.stats.${modtime}
-  fi
+}
 
-  cd $WORKDIR
+function postrun() {
+  bash ${PIPELINE_HOME}/workflow/scripts/gather_cluster_stats.sh ${WORKDIR}/snakemake.log > ${WORKDIR}/snakemake.log.HPC_summary.txt
+}
+
+function run () {
 
   SNAKEFILE="${PIPELINE_HOME}/workflow/find_mutations.snakefile"
 
   if [ "$1" == "local" ];then
+
+  preruncleanup
 
   snakemake -s $SNAKEFILE \
   --directory $WORKDIR \
@@ -176,6 +177,8 @@ function run () {
     --directory $WORKDIR \
     --configfile ${WORKDIR}/config.yaml 
   fi
+
+  postrun
 
   elif [ "$1" == "slurm" ];then
 
@@ -215,6 +218,8 @@ cd \$SLURM_SUBMIT_DIR
   --configfile ${WORKDIR}/config.yaml 
 
   fi
+
+bash ${PIPELINE_HOME}/workflow/scripts/gather_cluster_stats.sh ${WORKDIR}/snakemake.log > ${WORKDIR}/snakemake.log.HPC_summary.txt
 
 EOF
 sbatch ${WORKDIR}/submit_find_mutations_script.sbatch
