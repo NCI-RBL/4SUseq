@@ -80,11 +80,11 @@ rule hisat:
 		bam=join(WORKDIR,"hisat2","{sample}.bam"),
 		plusbam=join(WORKDIR,"hisat2","{sample}.plus.bam"),
 		minusbam=join(WORKDIR,"hisat2","{sample}.minus.bam"),
-		flagstat1=join(WORKDIR,"hisat2","{sample}.post_secondary_supplementary_filter.bam.flagstat"),
-		flagstat2=join(WORKDIR,"hisat2","{sample}.post_insertion_filter.bam.flagstat"),
-		flagstat3=join(WORKDIR,"hisat2","{sample}.bam.flagstat"),
-		flagstat4=join(WORKDIR,"hisat2","{sample}.plus.bam.flagstat"),
-		flagstat5=join(WORKDIR,"hisat2","{sample}.minus.bam.flagstat"),
+		postsecondarysupplementaryfilterbamflagstat=join(WORKDIR,"hisat2","{sample}.post_secondary_supplementary_filter.bam.flagstat"),
+		postinsertionfilterbamflagstat=join(WORKDIR,"hisat2","{sample}.post_insertion_filter.bam.flagstat"),
+		hisat2bamflagstat=join(WORKDIR,"hisat2","{sample}.bam.flagstat"),
+		plusbamflagstat=join(WORKDIR,"hisat2","{sample}.plus.bam.flagstat"),
+		minusbamflagstat5=join(WORKDIR,"hisat2","{sample}.minus.bam.flagstat"),
 	params:
 		sample="{sample}",
 		mem=MEMORY,
@@ -116,7 +116,7 @@ hisat2 \
 
 # Sort the "post_secondary_supplementary_filter" BAM and collect some stats
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.post_secondary_supplementary_filter.bam /dev/shm/{params.sample}.post_secondary_supplementary_filter.tmp.bam && rm -f /dev/shm/{params.sample}.post_secondary_supplementary_filter.tmp.bam
-sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.post_secondary_supplementary_filter.bam > {output.flagstat1}
+sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.post_secondary_supplementary_filter.bam > {output.postsecondarysupplementaryfilterbamflagstat}
 
 # Apply the "number of insertions in read" filter
 python {params.filter_script} -i /dev/shm/{params.sample}.post_secondary_supplementary_filter.bam -o /dev/shm/{params.sample}.post_insertion_filter.tmp.bam -q 0 -n {params.ninsertionfilter}
@@ -125,14 +125,14 @@ python {params.filter_script} -i /dev/shm/{params.sample}.post_secondary_supplem
 sambamba sort -n --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.post_insertion_filter.bam /dev/shm/{params.sample}.post_insertion_filter.tmp.bam && rm -f /dev/shm/{params.sample}.post_insertion_filter.tmp.bam
 java -Xmx{params.mem}g -jar $PICARDJARPATH/picard.jar FixMateInformation I=/dev/shm/{params.sample}.post_insertion_filter.bam O=/dev/stdout ASSUME_SORTED=true QUIET=true \
  | sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out=/dev/shm/{params.sample}.postsambambasort.bam /dev/stdin
-sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam > {output.flagstat2}
+sambamba flagstat --nthreads={threads} /dev/shm/{params.sample}.postsambambasort.bam > {output.postinsertionfilterbamflagstat}
 
 # Apply the MAPQ filter and remove "widowed" reads
 python {params.filter_script} -i /dev/shm/{params.sample}.postsambambasort.bam -o {output.bam} -q {params.mapqfilter} -n 1000
 
 # Index and collect stats
 sambamba index --nthreads={threads} {output.bam}
-sambamba flagstat --nthreads={threads} {output.bam} > {output.flagstat3}
+sambamba flagstat --nthreads={threads} {output.bam} > {output.hisat2bamflagstat}
 
 # Split reads into :
 # 1. Reads originating from + strand fragments --> these will go for T-to-C mutation detection
@@ -159,11 +159,11 @@ samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.R.bam /dev/shm/{pa
 
 # Sort and collect stats for plus strand BAM
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.plusbam} /dev/shm/{params.sample}.F.bam && rm -f /dev/shm/{params.sample}.F.bam
-sambamba flagstat --nthreads={threads} {output.plusbam} > {output.flagstat4}
+sambamba flagstat --nthreads={threads} {output.plusbam} > {output.plusbamflagstat}
 
 # Sort and collect stats for minus strand BAM
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.minusbam} /dev/shm/{params.sample}.R.bam && rm -f /dev/shm/{params.sample}.R.bam
-sambamba flagstat --nthreads={threads} {output.minusbam} > {output.flagstat5}
+sambamba flagstat --nthreads={threads} {output.minusbam} > {output.minusbamflagstat}
 
 """
 
@@ -173,8 +173,10 @@ rule create_toSNPcalling_BAM:
 		minusbam=rules.hisat.output.minusbam,
 		readids=rules.get_fastuniq_readids.output.readids
 	output:
-		plusbam=join(WORKDIR,"hisat2","{sample}.plus.toSNPcalling.bam"),
-		minusbam=join(WORKDIR,"hisat2","{sample}.minus.toSNPcalling.bam"),
+		plustoSNPcallingbam=join(WORKDIR,"hisat2","{sample}.plus.toSNPcalling.bam"),
+		minustoSNPcallingbam=join(WORKDIR,"hisat2","{sample}.minus.toSNPcalling.bam"),
+		plustoSNPcallingbamflagstat=join(WORKDIR,"hisat2","{sample}.plus.toSNPcalling.bam.flagstat"),
+		minustoSNPcallingbamflagstat=join(WORKDIR,"hisat2","{sample}.minus.toSNPcalling.bam.flagstat"),
 	params:
 		sample="{sample}",
 		mem=MEMORY,
@@ -184,17 +186,19 @@ rule create_toSNPcalling_BAM:
 	threads: 4
 	shell:"""
 python {params.script} -i {input.plusbam} -o /dev/shm/{params.sample}.plus.bam --readids {input.readids}
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.plusbam} /dev/shm/{params.sample}.plus.bam && rm -f /dev/shm/{params.sample}.plus.bam
+sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.plustoSNPcallingbam} /dev/shm/{params.sample}.plus.bam && rm -f /dev/shm/{params.sample}.plus.bam
+sambamba flagstat --nthreads={threads} {output.plustoSNPcallingbam} > {output.plustoSNPcallingbamflagstat}
 python {params.script} -i {input.minusbam} -o /dev/shm/{params.sample}.minus.bam --readids {input.readids}
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.minusbam} /dev/shm/{params.sample}.minus.bam && rm -f /dev/shm/{params.sample}.minus.bam
+sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.minustoSNPcallingbam} /dev/shm/{params.sample}.minus.bam && rm -f /dev/shm/{params.sample}.minus.bam
+sambamba flagstat --nthreads={threads} {output.minustoSNPcallingbam} > {output.minustoSNPcallingbamflagstat}
 """
 
 
 
 rule call_mutations:
 	input:
-		plusbam=rules.create_toSNPcalling_BAM.output.plusbam,
-		minusbam=rules.create_toSNPcalling_BAM.output.minusbam
+		plusbam=rules.create_toSNPcalling_BAM.output.plustoSNPcallingbam,
+		minusbam=rules.create_toSNPcalling_BAM.output.minustoSNPcallingbam
 	output:
 		plusvcf=join(WORKDIR,"vcf","{sample}.plus.vcf.gz"),
 		minusvcf=join(WORKDIR,"vcf","{sample}.minus.vcf.gz"),
@@ -241,6 +245,8 @@ rule split_bam_by_mutation:
 	output:
 		mutatedbam=join(WORKDIR,"bams","{sample}.mutated.bam"),
 		unmutatedbam=join(WORKDIR,"bams","{sample}.unmutated.bam"),
+		mutatedbamflagstat=join(WORKDIR,"bams","{sample}.mutated.bam.flagstat"),
+		unmutatedbamflagstat=join(WORKDIR,"bams","{sample}.unmutated.bam.flagstat"),
 	params:
 		sample="{sample}",
 		mem=MEMORY,
@@ -279,10 +285,11 @@ python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample
 
 samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.mutatedbam} /dev/shm/{params.sample}.mutated.bam && rm -f /dev/shm/{params.sample}.mutated.bam
+sambamba flagstat --nthreads={threads} {output.mutatedbam} > {output.unmutatedbamflagstat}
 
 samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.unmutated.bam /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam && rm -f /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.unmutatedbam} /dev/shm/{params.sample}.unmutated.bam && rm -f /dev/shm/{params.sample}.unmutated.bam
-
+sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutatedbamflagstat}
 """
 
 # rule get_nfragments_json:

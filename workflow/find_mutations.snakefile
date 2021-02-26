@@ -34,11 +34,6 @@ rule all:
 		expand(join(WORKDIR,"hisat2","{sample}.bam"), sample=SAMPLES),
 		expand(join(WORKDIR,"hisat2","{sample}.plus.bam"), sample=SAMPLES),
 		expand(join(WORKDIR,"hisat2","{sample}.minus.bam"), sample=SAMPLES),
-		expand(join(WORKDIR,"hisat2","{sample}.post_secondary_supplementary_filter.bam.flagstat"), sample=SAMPLES),
-		expand(join(WORKDIR,"hisat2","{sample}.post_insertion_filter.bam.flagstat"), sample=SAMPLES),
-		expand(join(WORKDIR,"hisat2","{sample}.bam.flagstat"), sample=SAMPLES),
-		expand(join(WORKDIR,"hisat2","{sample}.plus.bam.flagstat"), sample=SAMPLES),
-		expand(join(WORKDIR,"hisat2","{sample}.minus.bam.flagstat"), sample=SAMPLES),
 		# # call snps with bcftools
 		expand(join(WORKDIR,"vcf","{sample}.plus.vcf.gz"), sample=SAMPLES),
 		expand(join(WORKDIR,"vcf","{sample}.minus.vcf.gz"), sample=SAMPLES),
