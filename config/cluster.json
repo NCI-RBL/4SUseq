@@ -22,5 +22,8 @@
     },
     "create_nfragments_table": {
         "threads": "2"
+    },
+    "htseq": {
+        "threads": "2"
     }
 }
