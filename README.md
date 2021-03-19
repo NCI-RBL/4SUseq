@@ -1,5 +1,5 @@
 # 4SUseq
-Analysis of 4SU(4-thiouridine) labeled (and unlabeled) total RNA samples. This pipeline is designed specifically for analysis of samples generated under project **RBL-4**
+Analysis of 4SU(4-thiouridine) labeled (and unlabeled) total RNA samples. This snakemake workflow is designed specifically for analysis of samples generated under project **RBL-4**
 
 ## RBL-4
 ### Description: 
