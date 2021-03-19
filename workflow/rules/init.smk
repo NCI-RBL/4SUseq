@@ -51,3 +51,6 @@ if not os.path.exists(TRIMDIR):
 	os.mkdir(TRIMDIR)
 if not os.path.exists(FASTUNIQDIR):
 	os.mkdir(FASTUNIQDIR)
+
+GENOME=config["genome"]
+GTF=config["gtf"][GENOME]

@@ -155,7 +155,7 @@ function postrun() {
 
 function run () {
 
-  SNAKEFILE="${PIPELINE_HOME}/workflow/find_mutations.snakefile"
+  SNAKEFILE="${PIPELINE_HOME}/workflow/Snakefile"
 
   if [ "$1" == "local" ];then
 

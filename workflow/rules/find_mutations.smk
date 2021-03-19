@@ -84,7 +84,7 @@ rule hisat:
 		postinsertionfilterbamflagstat=join(WORKDIR,"hisat2","{sample}.post_insertion_filter.bam.flagstat"),
 		hisat2bamflagstat=join(WORKDIR,"hisat2","{sample}.bam.flagstat"),
 		plusbamflagstat=join(WORKDIR,"hisat2","{sample}.plus.bam.flagstat"),
-		minusbamflagstat5=join(WORKDIR,"hisat2","{sample}.minus.bam.flagstat"),
+		minusbamflagstat=join(WORKDIR,"hisat2","{sample}.minus.bam.flagstat"),
 	params:
 		sample="{sample}",
 		mem=MEMORY,
@@ -285,46 +285,68 @@ python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample
 
 samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.mutatedbam} /dev/shm/{params.sample}.mutated.bam && rm -f /dev/shm/{params.sample}.mutated.bam
-sambamba flagstat --nthreads={threads} {output.mutatedbam} > {output.unmutatedbamflagstat}
+sambamba flagstat --nthreads={threads} {output.mutatedbam} > {output.mutatedbamflagstat}
 
 samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.unmutated.bam /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam && rm -f /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.unmutatedbam} /dev/shm/{params.sample}.unmutated.bam && rm -f /dev/shm/{params.sample}.unmutated.bam
 sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutatedbamflagstat}
 """
 
-# rule get_nfragments_json:
-# 	input:
-# 		lanes1=rules.get_fastq_nreads.output.o1,
-# 		lanes2=rules.get_fastq_nreads.output.o2,
-# 		lanes3=rules.get_fastq_nreads.output.o3,
-# 		flagstat1=rules.hisat_on_fastuniq.output.flagstat1,
-# 		flagstat2=rules.hisat_on_fastuniq.output.flagstat2,
-# 		flagstat3=rules.hisat_on_fastuniq.output.flagstat3,
-# 		vcf=rules.call_mutations.output.TtoCvcf
-# 	output:
-# 		json=join(WORKDIR,"qc","nfragments","{sample}.json")
-# 	params:
-# 		sample="{sample}",
-# 		workdir=WORKDIR,
-# 		outdir=join(WORKDIR,"qc","nfragments"),
-# 		pyscript=join(SCRIPTSDIR,"get_per_sample_nfragments.py")
-# 	shell:"""
-# cd {params.workdir}
-# python {params.pyscript} {params.sample} {output.json}
-# """
+rule htseq:
+	input:
+		mutatedbam=rules.split_bam_by_mutation.output.mutatedbam,
+		unmutatedbam=rules.split_bam_by_mutation.output.unmutatedbam,
+	output:
+		mutatedcounts=join(WORKDIR,"htseq","{sample}.mutated.counts"),
+		unmutatedcounts=join(WORKDIR,"htseq","{sample}.unmutated.counts"),
+	params:
+		gtf=GTF,
+		htseqparams=config["htseqparams"]
+	envmodules: TOOLS["htseq"]["version"]
+	shell:"""
+htseq-count {params.htseqparams} {input.mutatedbam} {params.gtf} > {output.mutatedcounts}
+htseq-count {params.htseqparams} {input.unmutatedbam} {params.gtf} > {output.unmutatedcounts}
+"""
 
-# rule create_nfragments_table:
-# 	input:
-# 		expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample= SAMPLES)
-# 	output:
-# 		table=join(WORKDIR,"qc","nfragments","nfragments.tsv")
-# 	params:
-# 		workdir=WORKDIR,
-# 		outdir=join(WORKDIR,"qc","nfragments"),
-# 		pyscript=join(SCRIPTSDIR,"nfragments_json2table.py")
-# 	shell:"""
-# cd {params.outdir}
-# python {params.pyscript} {output.table}
-# """
+rule get_nfragments_json:
+	input:
+		rules.get_fastq_nreads.output.o1,
+		rules.get_fastq_nreads.output.o2,
+		rules.get_fastq_nreads.output.o3,
+		rules.hisat.output.postsecondarysupplementaryfilterbamflagstat,
+		rules.hisat.output.postinsertionfilterbamflagstat,
+		rules.hisat.output.hisat2bamflagstat,
+		rules.hisat.output.plusbamflagstat,
+		rules.hisat.output.minusbamflagstat,
+		rules.split_bam_by_mutation.output.mutatedbamflagstat,
+		rules.split_bam_by_mutation.output.unmutatedbamflagstat,
+		rules.call_mutations.output.vcf,
+		rules.call_mutations.output.plusvcf,
+		rules.call_mutations.output.minusvcf,
+	output:
+		json=join(WORKDIR,"qc","nfragments","{sample}.json")
+	params:
+		sample="{sample}",
+		workdir=WORKDIR,
+		outdir=join(WORKDIR,"qc","nfragments"),
+		pyscript=join(SCRIPTSDIR,"get_per_sample_nfragments.py")
+	shell:"""
+cd {params.workdir}
+python {params.pyscript} {params.sample} {output.json}
+"""
+
+rule create_nfragments_table:
+	input:
+		expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample= SAMPLES)
+	output:
+		table=join(WORKDIR,"qc","nfragments","nfragments.tsv")
+	params:
+		workdir=WORKDIR,
+		outdir=join(WORKDIR,"qc","nfragments"),
+		pyscript=join(SCRIPTSDIR,"nfragments_json2table.py")
+	shell:"""
+cd {params.outdir}
+python {params.pyscript} {output.table}
+"""
 
 

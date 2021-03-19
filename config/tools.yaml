@@ -22,3 +22,5 @@ bcftools:
  version: "bcftools/1.9"
 java:
  version: "java/12.0.1"
+htseq:
+ version: "htseq/0.11.4"

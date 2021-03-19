@@ -15,3 +15,7 @@ tools: "PIPELINE_HOME/config/tools.yaml"
 cluster: "PIPELINE_HOME/config/cluster.json"
 hisatindexdir: "HISAT2INDEXDIR"
 hisat_rna_strandness: "RF"
+gtf:
+  mm10: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/mm10/mm10.v25.gtf"
+  hg38: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/hg38/hg38.v36.gtf"
+htseqparams: "-f bam -r pos --stranded yes --additional-attr=gene_name"
