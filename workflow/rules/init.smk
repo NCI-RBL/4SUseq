@@ -11,7 +11,7 @@ from os.path import join
 
 ##### load config and sample sheets #####
 
-# configfile: "config.yaml"
+# configfile: "config/config.yaml"
 # validate(config, schema="../schemas/config.schema.yaml")
 
 # set memory
