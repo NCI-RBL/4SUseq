@@ -30,5 +30,6 @@ outfqfile = open(outfqfilename,'w')
 for rid in rids:
 	s=sequences[rid]
 	s.write_to_fastq_file(outfqfile)
-outfqfile.close()	
-os.system("pigz -p4 -f "+outfqfilename)
+outfqfile.close()
+if dummy[-1]=="gz":	
+	os.system("pigz -p4 -f "+outfqfilename)
