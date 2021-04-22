@@ -1,5 +1,5 @@
 import sys
- 
+
 stdin_fileno = sys.stdin
 
 f=open(sys.argv[1],'r')
@@ -8,9 +8,12 @@ for l in f.readlines():
 	if l.startswith("#"):
 		continue
 	l=l.strip().split("\t")
-	snpid="_".join([l[0],l[1],l[3],l[4]])
-	if not snpid in snplist:
-		snplist[snpid]=1
+	ref=l[3]
+	alt=l[4].split(",")
+	for a in alt:
+		snpid="_".join([l[0],l[1],ref,a])
+		if not snpid in snplist:
+			snplist[snpid]=1
 f.close()
 
 def check_snp_list(l):
@@ -19,7 +22,7 @@ def check_snp_list(l):
 		print(l[0])
 
 ref=sys.argv[2]
-alt=sys.argv[3] 
+alt=sys.argv[3]
 
 for line in stdin_fileno:
 	line=line.strip().split("\t")
