@@ -218,15 +218,11 @@ rule call_mutations:
 # call mutations with minimum 3 read-support
 # plus strand
 bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD,ADF,ADR {input.plusbam} | \
-bcftools call -mv -Ob --threads {threads} | \
-bcftools filter -i '%QUAL>45' -g3 -Ob --threads {threads} - | \
 bcftools view -i '(REF=="T" & ALT="C")' --threads {threads} - > /dev/shm/{params.sample}.TtoC.bcf
 bcftools sort -T /dev/shm /dev/shm/{params.sample}.TtoC.bcf | bgzip > {output.plusvcf}
 tabix -p vcf {output.plusvcf}
 # minus strand
 bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD,ADF,ADR {input.minusbam} | \
-bcftools call -mv -Ob --threads {threads} | \
-bcftools filter -i '%QUAL>45' -g3 -Ob --threads {threads} - | \
 bcftools view -i '(REF=="A" & ALT="G")' --threads {threads} - > /dev/shm/{params.sample}.AtoG.bcf
 bcftools sort -T /dev/shm /dev/shm/{params.sample}.AtoG.bcf | bgzip > {output.minusvcf}
 tabix -p vcf {output.minusvcf}
@@ -269,7 +265,7 @@ java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --skip-N \
  {input.plusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{plusvcf%.*}} "T" "C" | \
-sort | uniq > /dev/shm/{sample}.plus.readids
+sort | uniq > /dev/shm/{params.sample}.plus.readids
 
 minusvcf=$(basename {input.minusvcf})
 zcat {input.minusvcf} > /dev/shm/${{minusvcf%.*}}
@@ -278,10 +274,10 @@ java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --skip-N \
  {input.minusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{minusvcf%.*}} "A" "G" | \
-sort | uniq > /dev/shm/{sample}.minus.readids
+sort | uniq > /dev/shm/{params.sample}.minus.readids
 
-python {params.filterbyreadidspy} -i {input.plusbam} -o /dev/shm/{params.sample}.mutated.plus.bam --readids /dev/shm/{sample}.plus.readids -o2 /dev/shm/{params.sample}.unmutated.plus.bam
-python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample}.mutated.minus.bam --readids /dev/shm/{sample}.minus.readids -o2 /dev/shm/{params.sample}.unmutated.minus.bam
+python {params.filterbyreadidspy} -i {input.plusbam} -o /dev/shm/{params.sample}.mutated.plus.bam --readids /dev/shm/{params.sample}.plus.readids -o2 /dev/shm/{params.sample}.unmutated.plus.bam
+python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample}.mutated.minus.bam --readids /dev/shm/{params.sample}.minus.readids -o2 /dev/shm/{params.sample}.unmutated.minus.bam
 
 samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.mutatedbam} /dev/shm/{params.sample}.mutated.bam && rm -f /dev/shm/{params.sample}.mutated.bam
@@ -306,6 +302,41 @@ rule htseq:
 	shell:"""
 htseq-count {params.htseqparams} {input.mutatedbam} {params.gtf} > {output.mutatedcounts}
 htseq-count {params.htseqparams} {input.unmutatedbam} {params.gtf} > {output.unmutatedcounts}
+"""
+
+rule get_split_reads:
+	input:
+		unpack(get_fastqs),
+		bam=join(WORKDIR,"bams","{sample}.{mutated}.bam"),
+	output:
+		R1=join(WORKDIR,"filtered_reads","{sample}.{mutated}.R1.fastq.gz"),
+		R2=join(WORKDIR,"filtered_reads","{sample}.{mutated}.R2.fastq.gz"),
+	params:
+		sample="{sample}",
+		mutated="{mutated}",
+		pyscript=join(SCRIPTSDIR,"filter_fastq_by_readids_highmem.py"),
+		fastq_pair=join(RESOURCESDIR,"fastq_pair")
+	envmodules: TOOLS["samtools"]["version"]
+	shell:"""
+	samtools view {input.bam}|cut -f1|sort|uniq > /dev/shm/{params.sample}.{params.mutated}.readids
+	R1fastq=$(basename {output.R1})
+	R1fastq="/dev/shm/${{R1fastq%.*}}"
+	R2fastq=$(basename {output.R2})
+	R2fastq="/dev/shm/${{R2fastq%.*}}"
+	python {params.pyscript} \
+		--infq {input.R1} \
+		--outfq $R1fastq \
+		--readids /dev/shm/{params.sample}.{params.mutated}.readids
+	python {params.pyscript} \
+		--infq {input.R2} \
+		--outfq $R2fastq \
+		--readids /dev/shm/{params.sample}.{params.mutated}.readids
+	cd /dev/shm
+	{params.fastq_pair} $R1fastq $R2fastq
+	pigz -p4 ${{R1fastq}}.paired.fq
+	pigz -p4 ${{R2fastq}}.paired.fq
+	rsync -az --progress ${{R1fastq}}.paired.fq.gz {output.R1}
+	rsync -az --progress ${{R2fastq}}.paired.fq.gz {output.R2}
 """
 
 rule get_nfragments_json:
