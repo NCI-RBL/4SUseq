@@ -318,25 +318,26 @@ rule get_split_reads:
 		fastq_pair=join(RESOURCESDIR,"fastq_pair")
 	envmodules: TOOLS["samtools"]["version"]
 	shell:"""
-	samtools view {input.bam}|cut -f1|sort|uniq > /dev/shm/{params.sample}.{params.mutated}.readids
-	R1fastq=$(basename {output.R1})
-	R1fastq="/dev/shm/${{R1fastq%.*}}"
-	R2fastq=$(basename {output.R2})
-	R2fastq="/dev/shm/${{R2fastq%.*}}"
-	python {params.pyscript} \
-		--infq {input.R1} \
-		--outfq $R1fastq \
-		--readids /dev/shm/{params.sample}.{params.mutated}.readids
-	python {params.pyscript} \
-		--infq {input.R2} \
-		--outfq $R2fastq \
-		--readids /dev/shm/{params.sample}.{params.mutated}.readids
-	cd /dev/shm
-	{params.fastq_pair} $R1fastq $R2fastq
-	pigz -p4 ${{R1fastq}}.paired.fq
-	pigz -p4 ${{R2fastq}}.paired.fq
-	rsync -az --progress ${{R1fastq}}.paired.fq.gz {output.R1}
-	rsync -az --progress ${{R2fastq}}.paired.fq.gz {output.R2}
+samtools view {input.bam}|cut -f1|sort|uniq > /dev/shm/{params.sample}.{params.mutated}.readids
+R1fastq=$(basename {output.R1})
+R1fastq="/dev/shm/${{R1fastq%.*}}"
+R2fastq=$(basename {output.R2})
+R2fastq="/dev/shm/${{R2fastq%.*}}"
+python {params.pyscript} \
+	--infq {input.R1} \
+	--outfq $R1fastq \
+	--readids /dev/shm/{params.sample}.{params.mutated}.readids
+python {params.pyscript} \
+	--infq {input.R2} \
+	--outfq $R2fastq \
+	--readids /dev/shm/{params.sample}.{params.mutated}.readids
+cd /dev/shm
+{params.fastq_pair} $R1fastq $R2fastq
+pigz -p4 ${{R1fastq}}.paired.fq
+pigz -p4 ${{R2fastq}}.paired.fq
+rsync -az --progress ${{R1fastq}}.paired.fq.gz {output.R1}
+rsync -az --progress ${{R2fastq}}.paired.fq.gz {output.R2}
+rm -rf /dev/shm/*.fastq /dev/shm/*.fq /dev/shm/*.fq.gz /dev/shm/*.fastq.gz /dev/shm/*.readids
 """
 
 rule get_nfragments_json:

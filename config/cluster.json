@@ -25,5 +25,8 @@
     },
     "htseq": {
         "threads": "2"
+    },
+    "get_split_reads": {
+        "threads": "4"
     }
 }
