@@ -288,20 +288,40 @@ sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads
 sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutatedbamflagstat}
 """
 
+rule gtf2bed12:
+	input:
+		gtf=GTF
+	output:
+		bed12=join(WORKDIR,GENOME+".bed12")
+	envmodules: TOOLS["ucsc"]["version"]
+	shell:"""
+bn=$(basename {input.gtf})
+gtfToGenePred {input.gtf} /dev/shm/${{bn%.*}}.genepred
+genePredToBed /dev/shm/${{bn%.*}}.genepred {output.bed12}
+"""
+
 rule htseq:
 	input:
 		mutatedbam=rules.split_bam_by_mutation.output.mutatedbam,
 		unmutatedbam=rules.split_bam_by_mutation.output.unmutatedbam,
+		bed12=rules.gtf2bed12.output.bed12
 	output:
-		mutatedcounts=join(WORKDIR,"htseq","{sample}.mutated.counts"),
-		unmutatedcounts=join(WORKDIR,"htseq","{sample}.unmutated.counts"),
+		mutatedcounts_exon=join(WORKDIR,"htseq","{sample}.mutated.exon.counts"),
+		mutatedcounts_gene=join(WORKDIR,"htseq","{sample}.mutated.gene.counts"),
+		unmutatedcounts_exon=join(WORKDIR,"htseq","{sample}.unmutated.exon.counts"),
+		unmutatedcounts_gene=join(WORKDIR,"htseq","{sample}.unmutated.gene.counts"),
 	params:
 		gtf=GTF,
+		sample="{sample}",
 		htseqparams=config["htseqparams"]
-	envmodules: TOOLS["htseq"]["version"]
+	envmodules: TOOLS["htseq"]["version"], TOOLS["rseqc"]["version"]
 	shell:"""
-htseq-count {params.htseqparams} {input.mutatedbam} {params.gtf} > {output.mutatedcounts}
-htseq-count {params.htseqparams} {input.unmutatedbam} {params.gtf} > {output.unmutatedcounts}
+infer_experiment.py -i {input.mutatedbam} -r {input.bed12} -s 500000 > /dev/shm/{params.sample}.strand.info
+strandedness=$(tail -n1 /dev/shm/{params.sample}.strand.info|awk '{{if ( $NF > 0.75 ) {{print "reverse"}} else if ( $NF < 0.25 ) {{print "yes"}} else {{print "no"}}}}')
+htseq-count -t "exon" -f bam -r pos --stranded $strandedness --mode intersection-nonempty --additional-attr=gene_name {params.htseqparams} {input.mutatedbam} {params.gtf} > {output.mutatedcounts_exon}
+htseq-count -t "exon" -f bam -r pos --stranded $strandedness --mode intersection-nonempty --additional-attr=gene_name {params.htseqparams} {input.unmutatedbam} {params.gtf} > {output.unmutatedcounts_exon}
+htseq-count -t "gene" -f bam -r pos --stranded $strandedness --mode intersection-nonempty --additional-attr=gene_name {params.htseqparams} {input.mutatedbam} {params.gtf} > {output.mutatedcounts_gene}
+htseq-count -t "gene" -f bam -r pos --stranded $strandedness --mode intersection-nonempty --additional-attr=gene_name {params.htseqparams} {input.unmutatedbam} {params.gtf} > {output.unmutatedcounts_gene}
 """
 
 rule get_split_reads:
