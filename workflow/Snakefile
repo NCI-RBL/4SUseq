@@ -45,8 +45,10 @@ rule all:
 		# nfragments qc table
 		join(WORKDIR,"qc","nfragments","nfragments.tsv"),
 		# # htseq counts per sample
-		expand(join(WORKDIR,"htseq","{sample}.mutated.counts"), sample=SAMPLES),
-		expand(join(WORKDIR,"htseq","{sample}.unmutated.counts"), sample=SAMPLES),
+		expand(join(WORKDIR,"htseq","{sample}.mutated.exon.counts"), sample=SAMPLES),
+		expand(join(WORKDIR,"htseq","{sample}.unmutated.exon.counts"), sample=SAMPLES),
+		expand(join(WORKDIR,"htseq","{sample}.mutated.gene.counts"), sample=SAMPLES),
+		expand(join(WORKDIR,"htseq","{sample}.unmutated.gene.counts"), sample=SAMPLES),
 		# filtered reads
 		expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R1.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
 		expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R2.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
