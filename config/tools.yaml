@@ -24,3 +24,7 @@ java:
  version: "java/12.0.1"
 htseq:
  version: "htseq/0.11.4"
+rseqc:
+ version: "rseqc/4.0.0"
+ucsc:
+ version: "ucsc/411"
