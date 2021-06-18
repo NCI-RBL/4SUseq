@@ -14,6 +14,8 @@ samtools:
  version: "samtools/1.9"
 sambamba:
  version: "sambamba/0.8.0"
+star:
+ version: "STAR/2.7.8a"
 picard:
  version: "picard/2.9.2"
 bbtools:

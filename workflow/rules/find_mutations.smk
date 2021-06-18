@@ -72,6 +72,129 @@ fastq_screen --conf {params.conf} \
  {input.if2}
 """	
 
+rule star:
+	input:
+		if1=rules.cutadapt.output.of1,
+		if2=rules.cutadapt.output.of2
+	output:
+		starbam=join(WORKDIR,"star","{sample}.Aligned.out.bam"),
+		bam=join(WORKDIR,"star","{sample}.bam"),
+		bamflagstat=join(WORKDIR,"star","{sample}.bam.flagstat"),
+		tbam=join(WORKDIR,"star","{sample}.Aligned.toTranscriptome.out.bam"),
+		plusbam=join(WORKDIR,"star","{sample}.plus.bam"),
+		minusbam=join(WORKDIR,"star","{sample}.minus.bam"),
+		postsecondarysupplementaryfilterbamflagstat=join(WORKDIR,"star","{sample}.post_secondary_supplementary_filter.bam.flagstat"),
+		postinsertionfilterbamflagstat=join(WORKDIR,"star","{sample}.post_insertion_filter.bam.flagstat"),
+		plusbamflagstat=join(WORKDIR,"star","{sample}.plus.bam.flagstat"),
+		minusbamflagstat=join(WORKDIR,"star","{sample}.minus.bam.flagstat"),
+	params:
+		sample="{sample}",
+		mem=MEMORY,
+		workdir=WORKDIR,
+		outdir=join(WORKDIR,"star"),
+		genome=config["genome"],
+		starindexdir=config["starindexdir"],
+		gtf=GTF,
+		filter_script=join(SCRIPTSDIR,"filter_bam.py"),
+		mapqfilter=config['mapqfilter'],
+		ninsertionfilter=config['ninsertionfilter'],
+		outFilterIntronMotifs=config['starparams']['outFilterIntronMotifs'],
+		outFilterType=config['starparams']['outFilterType'],
+	threads: 56
+	envmodules: TOOLS["star"]["version"], TOOLS["samtools"]["version"],  TOOLS["picard"]["version"], 
+	shell:"""
+tmpdir=/lscratch/$SLURM_JOB_ID
+cd {params.outdir}
+# Align with STAR and remove secondary/supplementary alignments
+readlength=$(
+	zcat {input.if1} {input.if2} | \
+	awk -v maxlen=100 'NR%4==2 {{if (length($1) > maxlen+0) maxlen=length($1)}}; \
+	END {{print maxlen-1}}'
+)
+STAR --genomeDir {params.starindexdir} \
+	--outFilterIntronMotifs {params.outFilterIntronMotifs} \
+	--outFilterType {params.outFilterType} \
+	--readFilesIn {input.if1} {input.if2} \
+	--readFilesCommand zcat \
+	--runThreadN {threads} \
+	--outFileNamePrefix {params.sample}. \
+	--twopassMode Basic \
+	--sjdbGTFfile {params.gtf} \
+	--quantMode TranscriptomeSAM GeneCounts \
+	--outSAMtype BAM Unsorted \
+	--alignEndsProtrude 10 ConcordantPair \
+	--peOverlapNbasesMin 10 \
+	--outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{params.sample} \
+	--sjdbOverhang ${{readlength}}
+rm -rf {params.sample}._STAR*
+samtools flagstat {output.starbam} > {output.bamflagstat}
+# The above STAR command will generate {sample}.Aligned.out.bam and {sample}.Aligned.toTranscriptome.out.bam
+samtools view -@{threads} -b -F 4 -F 256 {output.starbam} > ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.tmp.bam
+
+# Sort the "post_secondary_supplementary_filter" BAM and collect some stats
+samtools sort -@{threads} --output-fmt BAM -o ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.bam ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.tmp.bam && rm -f ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.tmp.bam
+samtools flagstat -@{threads} ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.bam > {output.postsecondarysupplementaryfilterbamflagstat}
+rm -f ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.tmp.bam
+samtools index -@{threads} ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.bam
+
+# Apply the "number of insertions in read" filter
+python {params.filter_script} -i ${{tmpdir}}/{params.sample}.post_secondary_supplementary_filter.bam -o ${{tmpdir}}/{params.sample}.post_insertion_filter.bam -q 0 -n {params.ninsertionfilter}
+
+# Sort, FixMateInfo, collect stats
+java -Xmx{params.mem}g -jar $PICARDJARPATH/picard.jar FixMateInformation \
+ I=${{tmpdir}}/{params.sample}.post_insertion_filter.bam \
+ O=${{tmpdir}}/{params.sample}.postfixmate.bam \
+ ASSUME_SORTED=false \
+ CREATE_INDEX=true \
+ SORT_ORDER=coordinate
+samtools flagstat -@{threads} ${{tmpdir}}/{params.sample}.postfixmate.bam > {output.postinsertionfilterbamflagstat}
+
+# Apply the MAPQ filter and remove "widowed" reads
+python {params.filter_script} -i ${{tmpdir}}/{params.sample}.postfixmate.bam -o {output.bam} -q {params.mapqfilter} -n 1000
+
+# Index and collect stats
+samtools index -@{threads} {output.bam}
+samtools flagstat -@{threads} {output.bam} > ${{tmpdir}}/{params.sample}
+
+# Split reads into :
+# 1. Reads originating from + strand fragments --> these will go for T-to-C mutation detection
+#         R2
+#       ------>
+#     5'-------------------------------------------------3'
+#     3'-------------------------------------------------5'
+#                                                 <------
+#                                                    R1
+# 2. Reads originating from - strand fragments --> these will go for A-to-G mutation detection
+#         R1
+#       ------>
+#     5'-------------------------------------------------3'
+#     3'-------------------------------------------------5'
+#                                                 <------
+#                                                    R2
+
+samtools view -@{threads} -b -f 128 -F 16 {output.bam} > ${{tmpdir}}/{params.sample}.F1.bam
+samtools view -@{threads} -b -f 80 {output.bam} > ${{tmpdir}}/{params.sample}.F2.bam
+samtools merge -c -f -p -@{threads} ${{tmpdir}}/{params.sample}.F.bam ${{tmpdir}}/{params.sample}.F1.bam ${{tmpdir}}/{params.sample}.F2.bam
+#rm -f ${{tmpdir}}/{params.sample}.F1.bam ${{tmpdir}}/{params.sample}.F2.bam
+samtools view -@{threads} -b -f 144 {output.bam} > ${{tmpdir}}/{params.sample}.R1.bam
+samtools view -@{threads} -b -f 64 -F 16 {output.bam} > ${{tmpdir}}/{params.sample}.R2.bam
+samtools merge -c -f -p -@{threads} ${{tmpdir}}/{params.sample}.R.bam ${{tmpdir}}/{params.sample}.R1.bam ${{tmpdir}}/{params.sample}.R2.bam
+#rm -f ${{tmpdir}}/{params.sample}.R1.bam ${{tmpdir}}/{params.sample}.R2.bam
+
+# Sort and collect stats for plus strand BAM
+samtools sort -@56 --output-fmt BAM -o {output.plusbam} ${{tmpdir}}/{params.sample}.F.bam
+samtools flagstat -@56 {output.plusbam} > {output.plusbamflagstat}
+
+# Sort and collect stats for minus strand BAM
+samtools sort -@56 --output-fmt BAM -o {output.minusbam} ${{tmpdir}}/{params.sample}.R.bam
+samtools flagstat -@56 {output.minusbam} > {output.minusbamflagstat}
+
+# cleanup
+rm -rf ${{tmpdir}}/{params.sample}.*
+rm -rf _STARtmp
+
+"""
+
 rule hisat:
 	input:
 		if1=rules.cutadapt.output.of1,
@@ -100,7 +223,8 @@ rule hisat:
 	threads: 56
 	envmodules: TOOLS["hisat"]["version"], TOOLS["samtools"]["version"], TOOLS["sambamba"]["version"],  TOOLS["picard"]["version"],  TOOLS["bbtools"]["version"]
 	shell:"""
-# Align with HiSAT2 and remove secondary/supplementary alignments
+# Align with HISAT and remove secondary/supplementary alignments
+
 hisat2 \
  -x {params.hisatindex}/{params.genome}/{params.genome} \
  -1 {input.if1} \
@@ -164,6 +288,9 @@ sambamba flagstat --nthreads={threads} {output.plusbam} > {output.plusbamflagsta
 # Sort and collect stats for minus strand BAM
 sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.minusbam} /dev/shm/{params.sample}.R.bam && rm -f /dev/shm/{params.sample}.R.bam
 sambamba flagstat --nthreads={threads} {output.minusbam} > {output.minusbamflagstat}
+
+# cleanup
+rm -rf /dev/shm/{params.sample}.*
 
 """
 

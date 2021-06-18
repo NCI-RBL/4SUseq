@@ -52,3 +52,7 @@ rule all:
 		# filtered reads
 		expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R1.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
 		expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R2.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
+		# star
+		expand(join(WORKDIR,"star","{sample}.Aligned.out.bam"),sample=SAMPLES),
+		expand(join(WORKDIR,"star","{sample}.plus.bam"),sample=SAMPLES),
+		expand(join(WORKDIR,"star","{sample}.minus.bam"),sample=SAMPLES),
