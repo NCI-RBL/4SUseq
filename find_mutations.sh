@@ -26,8 +26,6 @@ function get_git_commitid_tag() {
 # PIPELINE_HOME="/data/RBL_NCI/Wolin/mESC_slam_analysis/workflow/4SUseq"
 PIPELINE_HOME=$(readlink -f $(dirname "$0"))
 echo "Pipeline Dir: $PIPELINE_HOME"
-# hg38 and mm10 hisat2 prebuilt indices
-HISAT2INDEXDIR="/data/RBL_NCI/Wolin/mESC_slam_analysis/resources"
 # other smaller resources are in resourcesdir from config.yaml
 # ## make current folder as working directory
 # a=$(readlink -f $0)
@@ -98,7 +96,7 @@ mkdir -p $WORKDIR
 # copy config.yaml and samples.tsv template files into the working dir
 echo ${PIPELINE_HOME}
 echo ${WORKDIR}
-sed -e "s/PIPELINE_HOME/${PIPELINE_HOME//\//\\/}/g" -e "s/WORKDIR/${WORKDIR//\//\\/}/g" -e "s/HISAT2INDEXDIR/${HISAT2INDEXDIR//\//\\/}/g" ${PIPELINE_HOME}/config/config.yaml > $WORKDIR/config.yaml
+sed -e "s/PIPELINE_HOME/${PIPELINE_HOME//\//\\/}/g" -e "s/WORKDIR/${WORKDIR//\//\\/}/g" ${PIPELINE_HOME}/config/config.yaml > $WORKDIR/config.yaml
 sed -e "s/PIPELINE_HOME/${PIPELINE_HOME//\//\\/}/g" -e "s/WORKDIR/${WORKDIR//\//\\/}/g" ${PIPELINE_HOME}/config/samples_test.tsv > $WORKDIR/samples.tsv
 
 # cp ${PIPELINE_HOME}/config/samples.tsv $WORKDIR/

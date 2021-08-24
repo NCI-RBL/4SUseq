@@ -214,7 +214,7 @@ rule hisat:
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"hisat2"),
 		genome=config["genome"],
-		hisatindex=config["hisatindexdir"],
+		hisatindex=config["hisatindex"],
 		hisat_rna_strandness=config["hisat_rna_strandness"],
 		splicesites=join(RESOURCESDIR,config["genome"]+".splicesites.txt"),
 		filter_script=join(SCRIPTSDIR,"filter_bam.py"),
@@ -226,7 +226,7 @@ rule hisat:
 # Align with HISAT and remove secondary/supplementary alignments
 
 hisat2 \
- -x {params.hisatindex}/{params.genome}/{params.genome} \
+ -x {params.hisatindex} \
  -1 {input.if1} \
  -2 {input.if2} \
  --rna-strandness {params.hisat_rna_strandness} \
@@ -335,7 +335,7 @@ rule call_mutations:
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"vcf"),
 		genome=config["genome"],
-		hisatindex=config["hisatindexdir"],
+		hisatindex=config["hisatindex"],
 		tab=join(RESOURCESDIR,config["genome"]+".genes.tab.gz"),
 		hdr=join(RESOURCESDIR,"hdr.txt"),
 		filter_script=join(SCRIPTSDIR,"filter_bam.py")
@@ -344,12 +344,12 @@ rule call_mutations:
 	shell:"""
 # call mutations with minimum 3 read-support
 # plus strand
-bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD,ADF,ADR {input.plusbam} | \
+bcftools mpileup -f {params.hisatindex}.fa -a AD,ADF,ADR {input.plusbam} | \
 bcftools view -i '(REF=="T" & ALT="C")' --threads {threads} - > /dev/shm/{params.sample}.TtoC.bcf
 bcftools sort -T /dev/shm /dev/shm/{params.sample}.TtoC.bcf | bgzip > {output.plusvcf}
 tabix -p vcf {output.plusvcf}
 # minus strand
-bcftools mpileup -f {params.hisatindex}/{params.genome}/{params.genome}.fa -a AD,ADF,ADR {input.minusbam} | \
+bcftools mpileup -f {params.hisatindex}.fa -a AD,ADF,ADR {input.minusbam} | \
 bcftools view -i '(REF=="A" & ALT="G")' --threads {threads} - > /dev/shm/{params.sample}.AtoG.bcf
 bcftools sort -T /dev/shm /dev/shm/{params.sample}.AtoG.bcf | bgzip > {output.minusvcf}
 tabix -p vcf {output.minusvcf}
@@ -376,7 +376,7 @@ rule split_bam_by_mutation:
 		workdir=WORKDIR,
 		outdir=join(WORKDIR,"filtered_reads"),
 		genome=config["genome"],
-		hisatindex=config["hisatindexdir"],
+		hisatindex=config["hisatindex"],
 		tsv2readidspy=join(SCRIPTSDIR,"tsv2readids.py"),
 		filterbyreadidspy=join(SCRIPTSDIR,"filter_bam_by_readids.py"),
 		sam2tsvjar=join(RESOURCESDIR,"sam2tsv.jar")
@@ -388,7 +388,7 @@ rule split_bam_by_mutation:
 plusvcf=$(basename {input.plusvcf})
 zcat {input.plusvcf} > /dev/shm/${{plusvcf%.*}}
 java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
- --reference {params.hisatindex}/{params.genome}/{params.genome}.fa \
+ --reference {params.hisatindex}.fa \
  --skip-N \
  {input.plusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{plusvcf%.*}} "T" "C" | \
@@ -397,7 +397,7 @@ sort | uniq > /dev/shm/{params.sample}.plus.readids
 minusvcf=$(basename {input.minusvcf})
 zcat {input.minusvcf} > /dev/shm/${{minusvcf%.*}}
 java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
- --reference {params.hisatindex}/{params.genome}/{params.genome}.fa \
+ --reference {params.hisatindex}.fa \
  --skip-N \
  {input.minusbam} | \
 python {params.tsv2readidspy} /dev/shm/${{minusvcf%.*}} "A" "G" | \
