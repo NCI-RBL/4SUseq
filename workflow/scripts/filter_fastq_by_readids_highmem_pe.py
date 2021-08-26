@@ -10,11 +10,11 @@ def get_sname(s):
 parser = argparse.ArgumentParser(description='Filter FASTQ by readids')
 parser.add_argument('--infq', dest='infq', type=str, required=True,
                     help='input FASTQ file')
-parser.add_argument('--infq2', dest='infq', type=str, required=True,
+parser.add_argument('--infq2', dest='infq2', type=str, required=True,
                     help='input FASTQ file')
 parser.add_argument('--outfq', dest='outfq', type=str, required=True,
                     help='filtered output FASTQ file')
-parser.add_argument('--outfq2', dest='outfq', type=str, required=True,
+parser.add_argument('--outfq2', dest='outfq2', type=str, required=True,
                     help='filtered output FASTQ file')
 parser.add_argument('--readids', dest='readids', type=str, required=True,
                     help='file with readids to keep (one readid per line)')
@@ -40,7 +40,7 @@ outfqfile = open(outfqfilename,'w')
 outfqfile2 = open(outfqfilename,'w')
 for rid in rids:
 	s=sequences[rid]
-	s2=sequences[rid]
+	s2=sequences2[rid]
 	s.write_to_fastq_file(outfqfile)
 	s2.write_to_fastq_file(outfqfile2)
 outfqfile.close()
