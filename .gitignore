@@ -4,3 +4,4 @@
 !.gitattributes
 site/
 test_*/
+**/slurm*out
