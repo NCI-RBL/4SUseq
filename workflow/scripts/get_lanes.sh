@@ -14,7 +14,10 @@ else
 sleep 30
 fi
 done
-for f in `ls *R1*.fastq.gz.lanes.txt`;do awk -v f=${f%%.*} -v OFS="\t" '{print f,$0}' $f;done|sort -k1,1 -k4,4n > lanes.txt
+for f in `ls *R1*.fastq.gz.lanes.txt`;do
+    bn=$(basename $f)
+    awk -v f=${bn%.R1.*} -v OFS="\t" '{print f,$0}' $f;
+done|sort -k1,1 -k4,4n > lanes.txt
 rm -f *gz.lanes.txt
 rm -f do_lanes
 cat lanes.txt |python ${scriptsdir}/collapse_lanes.py |awk -v OFS="\t" '{print "#",$_}' >> lanes.txt
