@@ -355,8 +355,8 @@ tabix -p vcf {output.vcf}
 
 rule split_bam_by_mutation:
     input:
-        plusbam=rules.hisat.output.plusbam,
-        minusbam=rules.hisat.output.minusbam,
+        plusbam=rules.star.output.plusbam,
+        minusbam=rules.star.output.minusbam,
         plusvcf=rules.call_mutations.output.plusvcf,
         minusvcf=rules.call_mutations.output.minusvcf,
     output:
@@ -364,6 +364,7 @@ rule split_bam_by_mutation:
         unmutatedbam=join(WORKDIR,"bams","{sample}.unmutated.bam"),
         mutatedbamflagstat=join(WORKDIR,"bams","{sample}.mutated.bam.flagstat"),
         unmutatedbamflagstat=join(WORKDIR,"bams","{sample}.unmutated.bam.flagstat"),
+        mutatedreadids=join(WORKDIR,"bams","{sample}.readids")
     params:
         sample="{sample}",
         mem=MEMORY,
@@ -399,6 +400,8 @@ java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
 python {params.tsv2readidspy} ${{TMPDIR}}/${{minusvcf%.*}} "A" "G" | \
 sort | uniq > ${{TMPDIR}}/{params.sample}.minus.readids
 
+cat ${{TMPDIR}}/{params.sample}.plus.readids ${{TMPDIR}}/{params.sample}.minus.readids > {output.mutatedreadids}
+
 python {params.filterbyreadidspy} -i {input.plusbam} -o ${{TMPDIR}}/{params.sample}.mutated.plus.bam --readids ${{TMPDIR}}/{params.sample}.plus.readids -o2 ${{TMPDIR}}/{params.sample}.unmutated.plus.bam
 python {params.filterbyreadidspy} -i {input.minusbam} -o ${{TMPDIR}}/{params.sample}.mutated.minus.bam --readids ${{TMPDIR}}/{params.sample}.minus.readids -o2 ${{TMPDIR}}/{params.sample}.unmutated.minus.bam
 
@@ -410,6 +413,30 @@ samtools merge -c -f -p -@ {threads} ${{TMPDIR}}/{params.sample}.unmutated.bam $
 sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out={output.unmutatedbam} ${{TMPDIR}}/{params.sample}.unmutated.bam && rm -f ${{TMPDIR}}/{params.sample}.unmutated.bam
 sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutatedbamflagstat}
 """
+
+rule split_tbam_by_mutation:
+    input:
+        tbam=rules.star.output.tbam,
+        mutatedreadids=rules.split_bam_by_mutation.outout.mutatedreadids
+    output:
+        mutatedtbam=join(WORKDIR,"bams","{sample}.mutated.toTranscriptome.bam"),
+        unmutatedtbam=join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam")
+    params:
+        sample="{sample}",
+        mem=MEMORY,
+        workdir=WORKDIR,
+        outdir=join(WORKDIR,"filtered_reads"),
+        genome=config["genome"],
+        filterbyreadidspy=join(SCRIPTSDIR,"filter_bam_by_readids.py"),
+    threads: getthreads("split_bam_by_mutation")
+    envmodules: TOOLS["java"]["version"], TOOLS["sambamba"]["version"], TOOLS["samtools"]["version"] 
+    shell:"""
+set -euf -o pipefail
+TMPDIR="/lscratch/$SLURM_JOBID"
+sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out=${{TMPDIR}}/{params.sample}.sortedtbam.bam {input.tbam}
+python {params.filterbyreadidspy} -i ${{TMPDIR}}/{params.sample}.sortedtbam.bam -o {output.mutatedtbam} --readids {input.mutatedreadids} -o2 {output.unmutatedtbam}
+"""       
+
 
 rule gtf2bed12:
     input:

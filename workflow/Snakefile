@@ -53,7 +53,10 @@ rule all:
         expand(join(WORKDIR,"vcf","{sample}.minus.vcf.gz"), sample=SAMPLES),
         # # split bam to mutated and unmutated BAMs
         expand(join(WORKDIR,"bams","{sample}.mutated.bam"), sample=SAMPLES),
-        expand(join(WORKDIR,"bams","{sample}.unmutated.bam"), sample=SAMPLES),	
+        expand(join(WORKDIR,"bams","{sample}.unmutated.bam"), sample=SAMPLES),
+        # tbam splits
+        expand(join(WORKDIR,"bams","{sample}.mutated.toTranscriptome.bam"), sample=SAMPLES),
+        expand(join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam"), sample=SAMPLES),	
         # nfragments qc table
         join(WORKDIR,"qc","nfragments","nfragments.tsv"),
         # # htseq counts per sample
