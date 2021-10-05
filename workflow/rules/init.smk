@@ -4,6 +4,7 @@ import yaml
 import pprint
 import os
 from os.path import join
+import json
 
 # this container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
@@ -54,3 +55,23 @@ if not os.path.exists(FASTUNIQDIR):
 
 GENOME=config["genome"]
 GTF=config["gtf"][GENOME]
+
+#########################################################
+# READ CLUSTER PER-RULE REQUIREMENTS
+#########################################################
+
+## Load cluster.json
+try:
+    CLUSTERJSON = config["clusterjson"]
+except KeyError:
+    CLUSTERJSON = join(WORKDIR,"cluster.json")
+check_readaccess(CLUSTERJSON)
+with open(CLUSTERJSON) as json_file:
+    CLUSTER = json.load(json_file)
+
+## Create lambda functions to allow a way to insert read-in values
+## as rule directives
+getthreads=lambda rname:int(CLUSTER[rname]["threads"]) if rname in CLUSTER and "threads" in CLUSTER[rname] else int(CLUSTER["__default__"]["threads"])
+getmemg=lambda rname:CLUSTER[rname]["mem"] if rname in CLUSTER else CLUSTER["__default__"]["mem"]
+getmemG=lambda rname:getmemg(rname).replace("g","G")
+#########################################################
