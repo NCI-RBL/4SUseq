@@ -12,8 +12,9 @@ rule get_fastuniq_readids:
         outdir=FASTUNIQDIR,
         fastuniq=join(RESOURCESDIR,"fastuniq")
     envmodules: TOOLS["pigz"]["version"]
-    threads: 56
+    threads: getthreads("get_fastuniq_readids")
     shell:"""
+set -e -x -o pipefail
 zcat {input.if1} > /lscratch/${{SLURM_JOBID}}/{params.sample}.R1.fastq
 zcat {input.if2} > /lscratch/${{SLURM_JOBID}}/{params.sample}.R2.fastq
 echo "/lscratch/${{SLURM_JOBID}}/{params.sample}.R1.fastq" > /lscratch/${{SLURM_JOBID}}/{params.sample}.list
@@ -41,36 +42,15 @@ rule get_fastq_nreads:
         outdir=FASTUNIQDIR,
         bashscript=join(SCRIPTSDIR,"get_lanes.sh"),
         scriptsdir=SCRIPTSDIR
-    threads: 56
+    threads: getthreads("get_fastq_nreads")
     shell:"""
+set -e -x -o pipefail
 for f in {input.f1} {input.f2} {input.f3};do
 cd $f
 bash {params.bashscript}
 done
 """
 
-rule fastq_screen:
-    input:
-        if1=rules.cutadapt.output.of1,
-        if2=rules.cutadapt.output.of2
-    output:
-        out1=join(WORKDIR,"qc","fastqscreen","{sample}.R1.trim_screen.txt"),
-        out2=join(WORKDIR,"qc","fastqscreen","{sample}.R2.trim_screen.txt")
-    params:
-        sample="{sample}",
-        workdir=WORKDIR,
-        outdir=join(WORKDIR,"qc","fastqscreen"),
-        conf=join(RESOURCESDIR,"fastq_screen.conf")
-    threads: 56
-    envmodules: TOOLS["fastq_screen"]["version"], TOOLS["bowtie"]["version"]
-    shell:"""
-fastq_screen --conf {params.conf} \
- --outdir "{params.outdir}" \
- --threads {threads} --subset 1000000 \
- --aligner bowtie2 --force \
- {input.if1} \
- {input.if2}
-"""	
 
 rule star:
     input:
@@ -102,9 +82,10 @@ rule star:
         ninsertionfilter=config['ninsertionfilter'],
         outFilterIntronMotifs=config['starparams']['outFilterIntronMotifs'],
         outFilterType=config['starparams']['outFilterType'],
-    threads: 56
+    threads: getthreads("star")
     envmodules: TOOLS["star"]["version"], TOOLS["samtools"]["version"],  TOOLS["picard"]["version"], 
     shell:"""
+set -e -x -o pipefail
 tmpdir=/lscratch/$SLURM_JOB_ID
 cd {params.outdir}
 # Align with STAR and remove secondary/supplementary alignments
@@ -126,7 +107,7 @@ STAR --genomeDir {params.starindexdir} \
     --outSAMtype BAM Unsorted \
     --alignEndsProtrude 10 ConcordantPair \
     --peOverlapNbasesMin 10 \
-    --outTmpDir=/lscratch/$SLURM_JOB_ID/STARtmp_{params.sample} \
+    --outTmpDir=${{tmpdir}}/STARtmp_{params.sample} \
     --sjdbOverhang ${{readlength}}
 rm -rf {params.sample}._STAR*
 samtools flagstat {output.starbam} > {output.bamflagstat}
@@ -224,9 +205,10 @@ rule hisat:
         filter_script=join(SCRIPTSDIR,"filter_bam.py"),
         mapqfilter=config['mapqfilter'],
         ninsertionfilter=config['ninsertionfilter']
-    threads: 56
+    threads: getthreads("hisat")
     envmodules: TOOLS["hisat"]["version"], TOOLS["samtools"]["version"], TOOLS["sambamba"]["version"],  TOOLS["picard"]["version"],  TOOLS["bbtools"]["version"]
     shell:"""
+set -e -x -o pipefail
 # Align with HISAT and remove secondary/supplementary alignments
 
 hisat2 \
@@ -316,14 +298,16 @@ rule create_toSNPcalling_BAM:
         workdir=WORKDIR,
         script=join(SCRIPTSDIR,"filter_bam_by_readids.py")
     envmodules: TOOLS["sambamba"]["version"]
-    threads: 4
+    threads: getthreads("create_toSNPcalling_BAM")
     shell:"""
-python {params.script} -i {input.plusbam} -o /dev/shm/{params.sample}.plus.bam --readids {input.readids}
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.plustoSNPcallingbam} /dev/shm/{params.sample}.plus.bam && rm -f /dev/shm/{params.sample}.plus.bam
+set -e -x -o pipefail
+TMPDIR="/lscratch/$SLURM_JOBID"
+python {params.script} -i {input.plusbam} -o ${{TMPDIR}}/{params.sample}.plus.bam --readids {input.readids}
+sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out={output.plustoSNPcallingbam} ${{TMPDIR}}/{params.sample}.plus.bam && rm -f ${{TMPDIR}}/{params.sample}.plus.bam
 sambamba flagstat --nthreads={threads} {output.plustoSNPcallingbam} > {output.plustoSNPcallingbamflagstat}
 sambamba index --nthreads={threads} {output.plustoSNPcallingbam}
-python {params.script} -i {input.minusbam} -o /dev/shm/{params.sample}.minus.bam --readids {input.readids}
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.minustoSNPcallingbam} /dev/shm/{params.sample}.minus.bam && rm -f /dev/shm/{params.sample}.minus.bam
+python {params.script} -i {input.minusbam} -o ${{TMPDIR}}/{params.sample}.minus.bam --readids {input.readids}
+sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out={output.minustoSNPcallingbam} ${{TMPDIR}}/{params.sample}.minus.bam && rm -f ${{TMPDIR}}/{params.sample}.minus.bam
 sambamba flagstat --nthreads={threads} {output.minustoSNPcallingbam} > {output.minustoSNPcallingbamflagstat}
 sambamba index --nthreads={threads} {output.minustoSNPcallingbam}
 """
@@ -347,19 +331,21 @@ rule call_mutations:
         tab=join(RESOURCESDIR,config["genome"]+".genes.tab.gz"),
         hdr=join(RESOURCESDIR,"hdr.txt"),
         filter_script=join(SCRIPTSDIR,"filter_bam.py")
-    threads: 56
+    threads: getthreads("call_mutations")
     envmodules: TOOLS["bcftools"]["version"], TOOLS["samtools"]["version"]
     shell:"""
+set -e -x -o pipefail
 # call mutations with minimum 3 read-support
 # plus strand
+TMPDIR="/lscratch/$SLURM_JOBID"
 bcftools mpileup -f {params.hisatindex}.fa -a AD,ADF,ADR {input.plusbam} | \
-bcftools view -i '(REF=="T" & ALT="C")' --threads {threads} - > /dev/shm/{params.sample}.TtoC.bcf
-bcftools sort -T /dev/shm /dev/shm/{params.sample}.TtoC.bcf | bgzip > {output.plusvcf}
+bcftools view -i '(REF=="T" & ALT="C")' --threads {threads} - > ${{TMPDIR}}/{params.sample}.TtoC.bcf
+bcftools sort -T ${{TMPDIR}} ${{TMPDIR}}/{params.sample}.TtoC.bcf | bgzip > {output.plusvcf}
 tabix -p vcf {output.plusvcf}
 # minus strand
 bcftools mpileup -f {params.hisatindex}.fa -a AD,ADF,ADR {input.minusbam} | \
-bcftools view -i '(REF=="A" & ALT="G")' --threads {threads} - > /dev/shm/{params.sample}.AtoG.bcf
-bcftools sort -T /dev/shm /dev/shm/{params.sample}.AtoG.bcf | bgzip > {output.minusvcf}
+bcftools view -i '(REF=="A" & ALT="G")' --threads {threads} - > ${{TMPDIR}}/{params.sample}.AtoG.bcf
+bcftools sort -T ${{TMPDIR}} ${{TMPDIR}}/{params.sample}.AtoG.bcf | bgzip > {output.minusvcf}
 tabix -p vcf {output.minusvcf}
 # merge mutations
 bcftools merge --force-samples -O z -o {output.vcf} {output.plusvcf} {output.minusvcf}
@@ -388,38 +374,40 @@ rule split_bam_by_mutation:
         tsv2readidspy=join(SCRIPTSDIR,"tsv2readids.py"),
         filterbyreadidspy=join(SCRIPTSDIR,"filter_bam_by_readids.py"),
         sam2tsvjar=join(RESOURCESDIR,"sam2tsv.jar")
-    threads: 4
+    threads: getthreads("split_bam_by_mutation")
     envmodules: TOOLS["java"]["version"], TOOLS["sambamba"]["version"], TOOLS["samtools"]["version"]
     shell:"""
+set -e -x -o pipefail
+TMPDIR="/lscratch/$SLURM_JOBID"
 # using sam2tsv from jvarkit --> https://lindenb.github.io/jvarkit/Sam2Tsv.html
 
 plusvcf=$(basename {input.plusvcf})
-zcat {input.plusvcf} > /dev/shm/${{plusvcf%.*}}
+zcat {input.plusvcf} > ${{TMPDIR}}/${{plusvcf%.*}}
 java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --reference {params.hisatindex}.fa \
  --skip-N \
  {input.plusbam} | \
-python {params.tsv2readidspy} /dev/shm/${{plusvcf%.*}} "T" "C" | \
-sort | uniq > /dev/shm/{params.sample}.plus.readids
+python {params.tsv2readidspy} ${{TMPDIR}}/${{plusvcf%.*}} "T" "C" | \
+sort | uniq > ${{TMPDIR}}/{params.sample}.plus.readids
 
 minusvcf=$(basename {input.minusvcf})
-zcat {input.minusvcf} > /dev/shm/${{minusvcf%.*}}
+zcat {input.minusvcf} > ${{TMPDIR}}/${{minusvcf%.*}}
 java -Xmx{params.mem}g -jar {params.sam2tsvjar} \
  --reference {params.hisatindex}.fa \
  --skip-N \
  {input.minusbam} | \
-python {params.tsv2readidspy} /dev/shm/${{minusvcf%.*}} "A" "G" | \
-sort | uniq > /dev/shm/{params.sample}.minus.readids
+python {params.tsv2readidspy} ${{TMPDIR}}/${{minusvcf%.*}} "A" "G" | \
+sort | uniq > ${{TMPDIR}}/{params.sample}.minus.readids
 
-python {params.filterbyreadidspy} -i {input.plusbam} -o /dev/shm/{params.sample}.mutated.plus.bam --readids /dev/shm/{params.sample}.plus.readids -o2 /dev/shm/{params.sample}.unmutated.plus.bam
-python {params.filterbyreadidspy} -i {input.minusbam} -o /dev/shm/{params.sample}.mutated.minus.bam --readids /dev/shm/{params.sample}.minus.readids -o2 /dev/shm/{params.sample}.unmutated.minus.bam
+python {params.filterbyreadidspy} -i {input.plusbam} -o ${{TMPDIR}}/{params.sample}.mutated.plus.bam --readids ${{TMPDIR}}/{params.sample}.plus.readids -o2 ${{TMPDIR}}/{params.sample}.unmutated.plus.bam
+python {params.filterbyreadidspy} -i {input.minusbam} -o ${{TMPDIR}}/{params.sample}.mutated.minus.bam --readids ${{TMPDIR}}/{params.sample}.minus.readids -o2 ${{TMPDIR}}/{params.sample}.unmutated.minus.bam
 
-samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.mutated.bam /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam && rm -f /dev/shm/{params.sample}.mutated.plus.bam /dev/shm/{params.sample}.mutated.minus.bam
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.mutatedbam} /dev/shm/{params.sample}.mutated.bam && rm -f /dev/shm/{params.sample}.mutated.bam
+samtools merge -c -f -p -@ {threads} ${{TMPDIR}}/{params.sample}.mutated.bam ${{TMPDIR}}/{params.sample}.mutated.plus.bam ${{TMPDIR}}/{params.sample}.mutated.minus.bam && rm -f ${{TMPDIR}}/{params.sample}.mutated.plus.bam ${{TMPDIR}}/{params.sample}.mutated.minus.bam
+sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out={output.mutatedbam} ${{TMPDIR}}/{params.sample}.mutated.bam && rm -f ${{TMPDIR}}/{params.sample}.mutated.bam
 sambamba flagstat --nthreads={threads} {output.mutatedbam} > {output.mutatedbamflagstat}
 
-samtools merge -c -f -p -@ {threads} /dev/shm/{params.sample}.unmutated.bam /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam && rm -f /dev/shm/{params.sample}.unmutated.plus.bam /dev/shm/{params.sample}.unmutated.minus.bam
-sambamba sort --memory-limit={params.mem}G --tmpdir=/dev/shm --nthreads={threads} --out={output.unmutatedbam} /dev/shm/{params.sample}.unmutated.bam && rm -f /dev/shm/{params.sample}.unmutated.bam
+samtools merge -c -f -p -@ {threads} ${{TMPDIR}}/{params.sample}.unmutated.bam ${{TMPDIR}}/{params.sample}.unmutated.plus.bam ${{TMPDIR}}/{params.sample}.unmutated.minus.bam && rm -f ${{TMPDIR}}/{params.sample}.unmutated.plus.bam ${{TMPDIR}}/{params.sample}.unmutated.minus.bam
+sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out={output.unmutatedbam} ${{TMPDIR}}/{params.sample}.unmutated.bam && rm -f ${{TMPDIR}}/{params.sample}.unmutated.bam
 sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutatedbamflagstat}
 """
 
@@ -430,9 +418,23 @@ rule gtf2bed12:
         bed12=join(WORKDIR,GENOME+".bed12")
     envmodules: TOOLS["ucsc"]["version"]
     shell:"""
+set -e -x -o pipefail
+TMPDIR="/lscratch/$SLURM_JOBID"
 bn=$(basename {input.gtf})
-gtfToGenePred {input.gtf} /dev/shm/${{bn%.*}}.genepred
-genePredToBed /dev/shm/${{bn%.*}}.genepred {output.bed12}
+gtfToGenePred {input.gtf} ${{TMPDIR}}/${{bn%.*}}.genepred
+genePredToBed ${{TMPDIR}}/${{bn%.*}}.genepred {output.bed12}
+"""
+
+rule strand_info:
+    input:
+        bam=rules.star.output.bam,
+        bed12=rules.gtf2bed12.output.bed12
+    output:
+        strand_info=join(WORKDIR,"star","{sample}.bam.strand_info"),
+    envmodules: TOOLS["rseqc"]["version"]
+    shell:"""
+set -e -x -o pipefail
+infer_experiment.py -i {input.bam} -r {input.bed12} -s 500000 > {output.strand_info}
 """
 
 rule htseq:
@@ -472,68 +474,28 @@ rule get_split_reads:
         pyscript=join(SCRIPTSDIR,"filter_fastq_by_readids_highmem.py"),
         fastq_pair=join(RESOURCESDIR,"fastq_pair")
     envmodules: TOOLS["samtools"]["version"]
+    threads: getthreads("get_split_reads")
     shell:"""
-samtools view {input.bam}|cut -f1|sort|uniq > /dev/shm/{params.sample}.{params.mutated}.readids
+set -e -x -o pipefail
+TMPDIR="/lscratch/$SLURM_JOBID"
+samtools view {input.bam}|cut -f1|sort|uniq > ${{TMPDIR}}/{params.sample}.{params.mutated}.readids
 R1fastq=$(basename {output.R1})
-R1fastq="/dev/shm/${{R1fastq%.*}}"
+R1fastq="${{TMPDIR}}/${{R1fastq%.*}}"
 R2fastq=$(basename {output.R2})
-R2fastq="/dev/shm/${{R2fastq%.*}}"
+R2fastq="${{TMPDIR}}/${{R2fastq%.*}}"
 python {params.pyscript} \
     --infq {input.R1} \
     --outfq $R1fastq \
-    --readids /dev/shm/{params.sample}.{params.mutated}.readids
+    --readids ${{TMPDIR}}/{params.sample}.{params.mutated}.readids
 python {params.pyscript} \
     --infq {input.R2} \
     --outfq $R2fastq \
-    --readids /dev/shm/{params.sample}.{params.mutated}.readids
-cd /dev/shm
+    --readids ${{TMPDIR}}/{params.sample}.{params.mutated}.readids
+cd ${{TMPDIR}}
 {params.fastq_pair} $R1fastq $R2fastq
 pigz -p4 ${{R1fastq}}.paired.fq
 pigz -p4 ${{R2fastq}}.paired.fq
 rsync -az --progress ${{R1fastq}}.paired.fq.gz {output.R1}
 rsync -az --progress ${{R2fastq}}.paired.fq.gz {output.R2}
-rm -rf /dev/shm/*.fastq /dev/shm/*.fq /dev/shm/*.fq.gz /dev/shm/*.fastq.gz /dev/shm/*.readids
+rm -rf ${{TMPDIR}}/*.fastq ${{TMPDIR}}/*.fq ${{TMPDIR}}/*.fq.gz ${{TMPDIR}}/*.fastq.gz ${{TMPDIR}}/*.readids
 """
-
-rule get_nfragments_json:
-    input:
-        rules.get_fastq_nreads.output.o1,
-        rules.get_fastq_nreads.output.o2,
-        rules.get_fastq_nreads.output.o3,
-        rules.hisat.output.postsecondarysupplementaryfilterbamflagstat,
-        rules.hisat.output.postinsertionfilterbamflagstat,
-        rules.hisat.output.hisat2bamflagstat,
-        rules.hisat.output.plusbamflagstat,
-        rules.hisat.output.minusbamflagstat,
-        rules.split_bam_by_mutation.output.mutatedbamflagstat,
-        rules.split_bam_by_mutation.output.unmutatedbamflagstat,
-        rules.call_mutations.output.vcf,
-        rules.call_mutations.output.plusvcf,
-        rules.call_mutations.output.minusvcf,
-    output:
-        json=join(WORKDIR,"qc","nfragments","{sample}.json")
-    params:
-        sample="{sample}",
-        workdir=WORKDIR,
-        outdir=join(WORKDIR,"qc","nfragments"),
-        pyscript=join(SCRIPTSDIR,"get_per_sample_nfragments.py")
-    shell:"""
-cd {params.workdir}
-python {params.pyscript} {params.sample} {output.json}
-"""
-
-rule create_nfragments_table:
-    input:
-        expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample= SAMPLES)
-    output:
-        table=join(WORKDIR,"qc","nfragments","nfragments.tsv")
-    params:
-        workdir=WORKDIR,
-        outdir=join(WORKDIR,"qc","nfragments"),
-        pyscript=join(SCRIPTSDIR,"nfragments_json2table.py")
-    shell:"""
-cd {params.outdir}
-python {params.pyscript} {output.table}
-"""
-
-
