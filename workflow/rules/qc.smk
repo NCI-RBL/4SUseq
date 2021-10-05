@@ -90,7 +90,7 @@ python {params.pyscript} {output.table}
 
 rule qualimap:
     input:
-        bam=rules.star.output.bam
+        bam=rules.star.output.bam,
         strand_info=rules.strand_info.output.strand_info
     output:
         html=join(WORKDIR,"qc","qualimap","{sample}","report.html")
