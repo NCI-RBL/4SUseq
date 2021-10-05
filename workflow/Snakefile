@@ -11,6 +11,7 @@ import os, sys
 
 include: "rules/init.smk"
 include: "rules/trim.smk"
+include: "rules/qc.smk"
 include: "rules/find_mutations.smk"
 
 report: "report/workflow.rst"
@@ -32,6 +33,10 @@ rule all:
         # # qc-->fastqscreen
         expand(join(WORKDIR,"qc","fastqscreen","{sample}.R1.trim_screen.txt"), sample=SAMPLES),
         expand(join(WORKDIR,"qc","fastqscreen","{sample}.R2.trim_screen.txt"), sample=SAMPLES),
+        # # qc-->insert size with bbtools
+        expand(join(WORKDIR,"qc","insert_size_hist","{sample}.bbtools.hist.txt"),sample=SAMPLES),
+        # # qc--> qualimap bamqc
+        expand(join(WORKDIR,"qc","qualimap","{sample}","report.html"),sample=SAMPLES),
         # # # hisat on fastuniq reads
         # expand(join(WORKDIR,"hisat2","{sample}.bam"), sample=SAMPLES),
         # expand(join(WORKDIR,"hisat2","{sample}.plus.bam"), sample=SAMPLES),
