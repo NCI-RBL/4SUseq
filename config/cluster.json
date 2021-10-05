@@ -1,32 +1,61 @@
 {
     "__default__": {
         "gres": "lscratch:256",
-        "mem": "200g",
+        "mem": "40g",
         "partition": "norm,ccr",
-        "threads": "56",
+        "threads": "2",
         "time": "24:00:00",
         "name"      : "{rule}.{wildcards}",
         "output"    : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.out",
         "error"     : "logs/${{SLURM_JOBID}}.{jobid}.{rule}.{wildcards}.err"
     },
     "get_fastq_nreads": {
-        "mem": "20g",
-        "threads": "2",
+        "threads": "56",
         "time": "2:00:00"
     },
     "get_nonmutant_reads": {
         "threads": "4"
     },
     "get_nfragments_json": {
-        "threads": "2"
+        "time": "2:00:00"
     },
     "create_nfragments_table": {
-        "threads": "2"
-    },
-    "htseq": {
-        "threads": "2"
+        "time": "2:00:00"
     },
     "get_split_reads": {
+        "threads": "4",
+        "time": "2:00:00"
+    },
+    "bbtools": {
+        "threads": "56",
+        "mem": "200g"
+    },
+    "star": {
+        "threads": "56",
+        "mem": "200g"
+    },
+    "get_fastuniq_readids": {
+        "threads": "56",
+        "mem": "200g"
+    },
+    "create_toSNPcalling_BAM": {
         "threads": "4"
+    },
+    "call_mutations": {
+        "threads": "56"
+    },
+    "split_bam_by_mutation": {
+        "threads": "4"
+    },
+    "fastq_screen": {
+        "threads": "56",
+        "mem": "200g"
+    },
+    "strand_info": {
+        "mem": "120g"
+    },
+    "qualimap": {
+        "threads":"56",
+        "mem":"200g"
     }
 }
