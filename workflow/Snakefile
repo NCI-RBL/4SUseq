@@ -11,8 +11,8 @@ import os, sys
 
 include: "rules/init.smk"
 include: "rules/trim.smk"
-include: "rules/qc.smk"
 include: "rules/find_mutations.smk"
+include: "rules/qc.smk"
 
 report: "report/workflow.rst"
 
