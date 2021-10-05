@@ -6,6 +6,37 @@ import os
 from os.path import join
 import json
 
+def check_existence(filename):
+    """Checks if file exists on filesystem
+    :param filename <str>: Name of file to check
+    """
+    filename=filename.strip()
+    if not os.path.exists(filename):
+        sys.exit("File: {} does not exists!".format(filename))
+    return True
+
+
+def check_readaccess(filename):
+    """Checks permissions to see if user can read a file
+    :param filename <str>: Name of file to check
+    """
+    filename=filename.strip()
+    check_existence(filename)
+    if not os.access(filename,os.R_OK):
+        sys.exit("File: {} exists, but user cannot read from file due to permissions!".format(filename))
+    return True
+
+
+def check_writeaccess(filename):
+    """Checks permissions to see if user can write to a file
+    :param filename <str>: Name of file to check
+    """
+    filename=filename.strip()
+    check_existence(filename)
+    if not os.access(filename,os.W_OK):
+        sys.exit("File: {} exists, but user cannot write to file due to permissions!".format(filename))
+    return True
+
 # this container defines the underlying OS for each job when using the workflow
 # with --use-conda --use-singularity
 # singularity: "docker://continuumio/miniconda3"
