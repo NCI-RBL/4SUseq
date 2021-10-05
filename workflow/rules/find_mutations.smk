@@ -417,7 +417,7 @@ sambamba flagstat --nthreads={threads} {output.unmutatedbam} > {output.unmutated
 rule split_tbam_by_mutation:
     input:
         tbam=rules.star.output.tbam,
-        mutatedreadids=rules.split_bam_by_mutation.outout.mutatedreadids
+        mutatedreadids=rules.split_bam_by_mutation.output.mutatedreadids
     output:
         mutatedtbam=join(WORKDIR,"bams","{sample}.mutated.toTranscriptome.bam"),
         unmutatedtbam=join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam")
