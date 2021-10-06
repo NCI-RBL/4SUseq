@@ -99,6 +99,7 @@ rule qualimap:
         outdir=join(WORKDIR,"qc","qualimap","{sample}"),
         mem=getmemG("qualimap")
     threads: getthreads("qualimap")
+    envmodules: TOOLS["qualimap"]["version"]
     shell:"""
 set -e -x -o
 qualimap bamqc \

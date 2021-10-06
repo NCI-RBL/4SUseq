@@ -30,3 +30,5 @@ rseqc:
  version: "rseqc/4.0.0"
 ucsc:
  version: "ucsc/411"
+qualimap:
+ version: "qualimap/2.2.1"
