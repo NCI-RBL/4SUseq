@@ -45,7 +45,8 @@
         "threads": "56"
     },
     "split_bam_by_mutation": {
-        "threads": "4"
+        "threads": "4",
+        "mem": "200g"
     },
     "fastq_screen": {
         "threads": "56",
