@@ -101,7 +101,7 @@ STAR --genomeDir {params.starindexdir} \
     --readFilesCommand zcat \
     --runThreadN {threads} \
     --outFileNamePrefix {params.sample}. \
-    --twopassMode Basic \
+    --twopassMode None \
     --sjdbGTFfile {params.gtf} \
     --quantMode TranscriptomeSAM GeneCounts \
     --outSAMtype BAM Unsorted \
