@@ -39,7 +39,8 @@
         "mem": "200g"
     },
     "create_toSNPcalling_BAM": {
-        "threads": "4"
+        "threads": "4",
+        "mem": "200g"
     },
     "call_mutations": {
         "threads": "56"
