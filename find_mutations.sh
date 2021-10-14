@@ -98,6 +98,7 @@ echo ${PIPELINE_HOME}
 echo ${WORKDIR}
 sed -e "s/PIPELINE_HOME/${PIPELINE_HOME//\//\\/}/g" -e "s/WORKDIR/${WORKDIR//\//\\/}/g" ${PIPELINE_HOME}/config/config.yaml > $WORKDIR/config.yaml
 sed -e "s/PIPELINE_HOME/${PIPELINE_HOME//\//\\/}/g" -e "s/WORKDIR/${WORKDIR//\//\\/}/g" ${PIPELINE_HOME}/config/samples_test.tsv > $WORKDIR/samples.tsv
+cp ${PIPELINE_HOME}/config/cluster.json $WORKDIR/
 
 # cp ${PIPELINE_HOME}/config/samples.tsv $WORKDIR/
 
