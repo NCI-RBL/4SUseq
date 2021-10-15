@@ -428,7 +428,7 @@ rule split_tbam_by_mutation:
         outdir=join(WORKDIR,"filtered_reads"),
         genome=config["genome"],
         filterbyreadidspy=join(SCRIPTSDIR,"filter_bam_by_readids.py"),
-    threads: getthreads("split_bam_by_mutation")
+    threads: getthreads("split_tbam_by_mutation")
     envmodules: TOOLS["java"]["version"], TOOLS["sambamba"]["version"], TOOLS["samtools"]["version"] 
     shell:"""
 set -euf -o pipefail
