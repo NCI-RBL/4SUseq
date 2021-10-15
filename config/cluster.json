@@ -49,6 +49,10 @@
         "threads": "4",
         "mem": "200g"
     },
+    "split_tbam_by_mutation": {
+        "threads": "4",
+        "mem": "200g"
+    },
     "fastq_screen": {
         "threads": "56",
         "mem": "200g"
