@@ -14,7 +14,7 @@ rule fastq_screen:
     threads: getthreads("fastq_screen")
     envmodules: TOOLS["fastq_screen"]["version"], TOOLS["bowtie"]["version"]
     shell:"""
-set -e -x -o pipefail
+set -exuf -o pipefail
 fastq_screen --conf {params.conf} \
  --outdir "{params.outdir}" \
  --threads {threads} --subset 1000000 \
@@ -37,7 +37,7 @@ rule bbtools:
     threads: getthreads("fastq_screen")
     envmodules: TOOLS["bbtools"]["version"],
     shell:"""
-set -e -x -o pipefail
+set -exuf -o pipefail
 bbtools bbmerge-auto \
 in1={input.if1} \
 in2={input.if2} \
@@ -68,7 +68,7 @@ rule get_nfragments_json:
         outdir=join(WORKDIR,"qc","nfragments"),
         pyscript=join(SCRIPTSDIR,"get_per_sample_nfragments.py")
     shell:"""
-set -e -x -o pipefail
+set -exuf -o pipefail
 cd {params.workdir}
 python {params.pyscript} {params.sample} {output.json}
 """
@@ -83,7 +83,7 @@ rule create_nfragments_table:
         outdir=join(WORKDIR,"qc","nfragments"),
         pyscript=join(SCRIPTSDIR,"nfragments_json2table.py")
     shell:"""
-set -e -x -o pipefail
+set -exuf -o pipefail
 cd {params.outdir}
 python {params.pyscript} {output.table}
 """
@@ -93,7 +93,7 @@ rule qualimap:
         bam=rules.star.output.bam,
         strand_info=rules.strand_info.output.strand_info
     output:
-        html=join(WORKDIR,"qc","qualimap","{sample}","report.html")
+        html=join(WORKDIR,"qc","qualimap","{sample}","qualimapReport.html")
     params:
         sample="{sample}",
         outdir=join(WORKDIR,"qc","qualimap","{sample}"),

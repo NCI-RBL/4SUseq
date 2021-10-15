@@ -36,7 +36,7 @@ rule all:
         # # qc-->insert size with bbtools
         expand(join(WORKDIR,"qc","insert_size_hist","{sample}.bbtools.hist.txt"),sample=SAMPLES),
         # # qc--> qualimap bamqc
-        expand(join(WORKDIR,"qc","qualimap","{sample}","report.html"),sample=SAMPLES),
+        expand(join(WORKDIR,"qc","qualimap","{sample}","qualimapReport.html"),sample=SAMPLES),
         # # # hisat on fastuniq reads
         # expand(join(WORKDIR,"hisat2","{sample}.bam"), sample=SAMPLES),
         # expand(join(WORKDIR,"hisat2","{sample}.plus.bam"), sample=SAMPLES),
