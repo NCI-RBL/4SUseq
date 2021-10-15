@@ -16,7 +16,7 @@ cluster: "PIPELINE_HOME/config/cluster.json"
 hisatindex: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/mm10/mm10_plus_45S_plus_5S.masked"
 hisat_rna_strandness: "RF"
 gtf:
-  mm10: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/mm10/mm10_plus_45S_plus_5S.gtf"
+  mm10: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/mm10/mm10_plus_45S_plus_5S.v2.gtf"
   hg38: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/hg38/hg38.v36.gtf"
 htseqparams: "-f bam -r pos --stranded yes --additional-attr=gene_name"
 starindexdir: "/data/RBL_NCI/Wolin/mESC_slam_analysis/resources/mm10/STAR_index_mm10_plus_45S_plus_5S.masked"
