@@ -101,7 +101,8 @@ rule qualimap:
     threads: getthreads("qualimap")
     envmodules: TOOLS["qualimap"]["version"]
     shell:"""
-set -e -x -o
+set -exuf -o pipefail
+unset DISPLAY
 qualimap bamqc \
  --java-mem-size={params.mem} \
  -bam {input.bam} \
