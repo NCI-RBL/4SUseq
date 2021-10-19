@@ -439,8 +439,8 @@ sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={thre
 python {params.filterbyreadidspy} -i ${{TMPDIR}}/{params.sample}.sortedtbam.bam -o ${{TMPDIR}}/${{mutatedbn}} --readids {input.mutatedreadids} -o2 ${{TMPDIR}}/${{unmutatedbn}}
 convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{mutatedbn}}.converted
 convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{unmutatedbn}}.converted
-mv ${{TMPDIR}}/${{mutatedbn}}.converted.bam {output.mutatedbam}
-mv ${{TMPDIR}}/${{unmutatedbn}}.converted.bam {output.unmutatedbam}
+mv ${{TMPDIR}}/${{mutatedbn}}.converted.bam {output.mutatedtbam}
+mv ${{TMPDIR}}/${{unmutatedbn}}.converted.bam {output.unmutatedtbam}
 """       
 
 
