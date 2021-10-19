@@ -71,7 +71,7 @@ function runcheck(){
   echo "Working Dir: $WORKDIR"
   if [ ! -d $WORKDIR ];then err "Folder $WORKDIR does not exist!"; exit 1; fi
   module load python/3.7
-  module load snakemake/5.24.1
+  module load snakemake
 }
 
 function dryrun() {
