@@ -59,7 +59,7 @@ rule all:
         expand(join(WORKDIR,"bams","{sample}.mutated.toTranscriptome.bam"), sample=SAMPLES),
         expand(join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam"), sample=SAMPLES),	
         # nfragments qc table
-        join(WORKDIR,"qc","nfragments","nfragments.tsv"),
+        # join(WORKDIR,"qc","nfragments","nfragments.tsv"),
         # # htseq counts per sample
         # expand(join(WORKDIR,"htseq","{sample}.mutated.exon.counts"), sample=SAMPLES),
         # expand(join(WORKDIR,"htseq","{sample}.unmutated.exon.counts"), sample=SAMPLES),
