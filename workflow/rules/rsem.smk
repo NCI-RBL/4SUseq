@@ -39,7 +39,8 @@ rule get_rsem_counts:
         starbam=rules.star.output.starbam, # used only for strandinfo
         tbam=rules.star.output.tbam,
         mutatedtbam=rules.split_tbam_by_mutation.output.mutatedtbam,
-        unmutatedtbam=rules.split_tbam_by_mutation.output.unmutatedtbam,      
+        unmutatedtbam=rules.split_tbam_by_mutation.output.unmutatedtbam,
+        bed12=rules.create_bed12.output.bed12      
     output:
         strandinfo=join(WORKDIR,"rsem","{sample}","{sample}.strandinfo"),
         gcounts=join(WORKDIR,"rsem","{sample}","{sample}.RSEM.genes.results"),
