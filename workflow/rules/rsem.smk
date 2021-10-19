@@ -40,7 +40,8 @@ rule get_rsem_counts:
         tbam=rules.star.output.tbam,
         mutatedtbam=rules.split_tbam_by_mutation.output.mutatedtbam,
         unmutatedtbam=rules.split_tbam_by_mutation.output.unmutatedtbam,
-        bed12=rules.create_bed12.output.bed12      
+        bed12=rules.create_bed12.output.bed12,
+        ump=rules.create_rsem_index.output.ump      
     output:
         strandinfo=join(WORKDIR,"rsem","{sample}","{sample}.strandinfo"),
         gcounts=join(WORKDIR,"rsem","{sample}","{sample}.RSEM.genes.results"),
