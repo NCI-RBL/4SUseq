@@ -429,12 +429,18 @@ rule split_tbam_by_mutation:
         genome=config["genome"],
         filterbyreadidspy=join(SCRIPTSDIR,"filter_bam_by_readids.py"),
     threads: getthreads("split_tbam_by_mutation")
-    envmodules: TOOLS["java"]["version"], TOOLS["sambamba"]["version"], TOOLS["samtools"]["version"] 
+    envmodules: TOOLS["java"]["version"], TOOLS["sambamba"]["version"], TOOLS["samtools"]["version"], TOOLS["rsem"]["version"]
     shell:"""
 set -euf -o pipefail
 TMPDIR="/lscratch/$SLURM_JOBID"
+mutatedbn=$(basename {output.mutatedtbam})
+unmutatedbn=$(basename {output.unmutatedtbam})
 sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out=${{TMPDIR}}/{params.sample}.sortedtbam.bam {input.tbam}
-python {params.filterbyreadidspy} -i ${{TMPDIR}}/{params.sample}.sortedtbam.bam -o {output.mutatedtbam} --readids {input.mutatedreadids} -o2 {output.unmutatedtbam}
+python {params.filterbyreadidspy} -i ${{TMPDIR}}/{params.sample}.sortedtbam.bam -o ${{TMPDIR}}/${{mutatedbn}} --readids {input.mutatedreadids} -o2 ${{TMPDIR}}/${{unmutatedbn}}
+convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{mutatedbn}}.converted
+convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{unmutatedbn}}.converted
+mv ${{TMPDIR}}/${{mutatedbn}}.converted.bam {output.mutatedbam}
+mv ${{TMPDIR}}/${{unmutatedbn}}.converted.bam {output.unmutatedbam}
 """       
 
 
