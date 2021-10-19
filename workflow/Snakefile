@@ -13,6 +13,7 @@ include: "rules/init.smk"
 include: "rules/trim.smk"
 include: "rules/find_mutations.smk"
 include: "rules/qc.smk"
+include: "rules/rsem.smk"
 
 report: "report/workflow.rst"
 
@@ -67,3 +68,8 @@ rule all:
         # # filtered reads
         # expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R1.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
         # expand(join(WORKDIR,"filtered_reads","{sample}.{mutated}.R2.fastq.gz"),sample=SAMPLES,mutated=["mutated","unmutated"]),
+        # rsem counts
+        expand(join(WORKDIR,"rsem","{sample}","{sample}.RSEM.genes.results"),sample=SAMPLES),
+        expand(join(WORKDIR,"rsem","{sample}","{sample}_mutated.RSEM.genes.results"), sample=SAMPLES),
+        expand(join(WORKDIR,"rsem","{sample}","{sample}_unmutated.RSEM.genes.results"), sample=SAMPLES)
+        

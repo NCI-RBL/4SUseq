@@ -86,6 +86,12 @@ if not os.path.exists(FASTUNIQDIR):
 
 GENOME=config["genome"]
 GTF=config["gtf"][GENOME]
+check_readaccess(GTF)
+print("# ANNOTATION FILE :",GTF)
+REFFA=config["reffa"][GENOME]
+check_readaccess(REFFA)
+print("# REFERENCE FASTA :",REFFA)
+RSEMINDEXDIR=join(WORKDIR,"rsem_index")
 
 #########################################################
 # READ CLUSTER PER-RULE REQUIREMENTS
