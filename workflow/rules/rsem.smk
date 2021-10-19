@@ -37,6 +37,7 @@ rm -f ${{bn}}.tmp
 rule get_strand_info:
     input:
         starbam=rules.star.output.starbam, # used only for strandinfo
+        bed12=rules.create_bed12.output.bed12,
     output:
         strandinfo=join(WORKDIR,"rsem","{sample}","{sample}.strandinfo"),
     envmodules: TOOLS['rseqc']['version'],
