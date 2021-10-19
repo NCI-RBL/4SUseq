@@ -64,7 +64,7 @@
         "threads":"56",
         "mem":"200g"
     },
-    "create_rsem_index" {
+    "create_rsem_index": {
         "threads": "56",
         "mem": "200g"       
     },
