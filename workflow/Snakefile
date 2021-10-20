@@ -61,7 +61,7 @@ rule all:
         # gather stats
         expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample=SAMPLES),
         # nfragments qc table
-        # join(WORKDIR,"qc","nfragments","nfragments.tsv"),
+        join(WORKDIR,"qc","nfragments","nfragments.tsv"),
         # # htseq counts per sample
         # expand(join(WORKDIR,"htseq","{sample}.mutated.exon.counts"), sample=SAMPLES),
         # expand(join(WORKDIR,"htseq","{sample}.unmutated.exon.counts"), sample=SAMPLES),
