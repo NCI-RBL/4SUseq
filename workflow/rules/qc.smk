@@ -47,19 +47,21 @@ k=62 extend2=200 rem ecct -Xmx{params.mem}
 
 rule get_nfragments_json:
     input:
-        rules.get_fastq_nreads.output.o1,
-        rules.get_fastq_nreads.output.o2,
-        rules.get_fastq_nreads.output.o3,
-        rules.star.output.postsecondarysupplementaryfilterbamflagstat,
-        rules.star.output.postinsertionfilterbamflagstat,
-        rules.star.output.bamflagstat,
-        rules.star.output.plusbamflagstat,
-        rules.star.output.minusbamflagstat,
-        rules.split_bam_by_mutation.output.mutatedbamflagstat,
-        rules.split_bam_by_mutation.output.unmutatedbamflagstat,
-        rules.call_mutations.output.vcf,
-        rules.call_mutations.output.plusvcf,
-        rules.call_mutations.output.minusvcf,
+        rawlanestxt=rules.get_fastq_nreads.output.o1, # raw lanes.txt
+        trimmedlanestxt=rules.get_fastq_nreads.output.o2, # trimmed lanes.txt
+        fastuniqlanestxt=rules.get_fastq_nreads.output.o3, # fastuniq lanes.txt
+        postsecondarysupplementaryfilterbamflagstat=rules.star.output.postsecondarysupplementaryfilterbamflagstat,
+        postinsertionfilterbamflagstat=rules.star.output.postinsertionfilterbamflagstat,
+        postmapqwidowfilterbamflagstat=rules.star.output.bamflagstat,
+        pluspostmapqwidowfilterbamflagstat=rules.star.output.plusbamflagstat,
+        minuspostmapqwidowfilterbamflagstat=rules.star.output.minusbamflagstat,
+        plustoSNPcallingbamflagstat=rules.create_toSNPcalling_BAM.plustoSNPcallingbamflagstat,
+        minustoSNPcallingbamflagstat=rules.create_toSNPcalling_BAM.minustoSNPcallingbamflagstat,
+        mutatedbamflagstat=rules.split_bam_by_mutation.output.mutatedbamflagstat,
+        unmutatedbamflagstat=rules.split_bam_by_mutation.output.unmutatedbamflagstat,
+        vcf=rules.call_mutations.output.vcf,
+        plusvcf=rules.call_mutations.output.plusvcf,
+        minusvcf=rules.call_mutations.output.minusvcf,
     output:
         json=join(WORKDIR,"qc","nfragments","{sample}.json")
     params:
@@ -70,7 +72,22 @@ rule get_nfragments_json:
     shell:"""
 set -exuf -o pipefail
 cd {params.workdir}
-python {params.pyscript} {params.sample} {output.json}
+python {params.pyscript} {params.sample} {output.json} \
+    {input.rawlanestxt} \
+    {input.trimmedlanestxt} \
+    {input.fastuniqlanestxt} \
+    {input.postsecondarysupplementaryfilterbamflagstat} \
+    {input.postinsertionfilterbamflagstat} \
+    {input.postmapqwidowfilterbamflagstat} \
+    {input.pluspostmapqwidowfilterbamflagstat} \
+    {input.minuspostmapqwidowfilterbamflagstat} \
+    {input.plustoSNPcallingbamflagstat} \
+    {input.minustoSNPcallingbamflagstat} \
+    {input.mutatedbamflagstat} \
+    {input.unmutatedbamflagstat} \
+    {input.vcf} \
+    {input.plusvcf} \
+    {input.minusvcf}
 """
 
 rule create_nfragments_table:
