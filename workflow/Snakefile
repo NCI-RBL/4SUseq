@@ -57,7 +57,9 @@ rule all:
         expand(join(WORKDIR,"bams","{sample}.unmutated.bam"), sample=SAMPLES),
         # tbam splits
         expand(join(WORKDIR,"bams","{sample}.mutated.toTranscriptome.bam"), sample=SAMPLES),
-        expand(join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam"), sample=SAMPLES),	
+        expand(join(WORKDIR,"bams","{sample}.unmutated.toTranscriptome.bam"), sample=SAMPLES),
+        # gather stats
+        expand(join(WORKDIR,"qc","nfragments","{sample}.json"),sample=SAMPLES),
         # nfragments qc table
         # join(WORKDIR,"qc","nfragments","nfragments.tsv"),
         # # htseq counts per sample
