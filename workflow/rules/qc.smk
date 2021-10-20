@@ -52,7 +52,6 @@ rule get_nfragments_json:
         fastuniqlanestxt=rules.get_fastq_nreads.output.o3, # fastuniq lanes.txt
         postsecondarysupplementaryfilterbamflagstat=rules.star.output.postsecondarysupplementaryfilterbamflagstat,
         postinsertionfilterbamflagstat=rules.star.output.postinsertionfilterbamflagstat,
-        postmapqwidowfilterbamflagstat=rules.star.output.bamflagstat,
         pluspostmapqwidowfilterbamflagstat=rules.star.output.plusbamflagstat,
         minuspostmapqwidowfilterbamflagstat=rules.star.output.minusbamflagstat,
         plustoSNPcallingbamflagstat=rules.create_toSNPcalling_BAM.output.plustoSNPcallingbamflagstat,
@@ -78,7 +77,6 @@ python {params.pyscript} {params.sample} {output.json} \
     {input.fastuniqlanestxt} \
     {input.postsecondarysupplementaryfilterbamflagstat} \
     {input.postinsertionfilterbamflagstat} \
-    {input.postmapqwidowfilterbamflagstat} \
     {input.pluspostmapqwidowfilterbamflagstat} \
     {input.minuspostmapqwidowfilterbamflagstat} \
     {input.plustoSNPcallingbamflagstat} \
