@@ -438,7 +438,7 @@ unmutatedbn=$(basename {output.unmutatedtbam})
 sambamba sort --memory-limit={params.mem}G --tmpdir=${{TMPDIR}} --nthreads={threads} --out=${{TMPDIR}}/{params.sample}.sortedtbam.bam {input.tbam}
 python {params.filterbyreadidspy} -i ${{TMPDIR}}/{params.sample}.sortedtbam.bam -o ${{TMPDIR}}/${{mutatedbn}} --readids {input.mutatedreadids} -o2 ${{TMPDIR}}/${{unmutatedbn}}
 convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{mutatedbn}}.converted
-convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{mutatedbn}} ${{TMPDIR}}/${{unmutatedbn}}.converted
+convert-sam-for-rsem -p {threads} --memory-per-thread 16G ${{TMPDIR}}/${{unmutatedbn}} ${{TMPDIR}}/${{unmutatedbn}}.converted
 mv ${{TMPDIR}}/${{mutatedbn}}.converted.bam {output.mutatedtbam}
 mv ${{TMPDIR}}/${{unmutatedbn}}.converted.bam {output.unmutatedtbam}
 """       
